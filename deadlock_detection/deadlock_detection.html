@@ -2,118 +2,463 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deadlock Detection Simulator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="css/deadlock_detection.css">
+    <title>Deadlock Detection Simulator | OS Concepts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header class="app-header">
-            <h1>Deadlock Detection Simulator</h1>
-            <p class="subtitle">Visualize and detect deadlocks using Resource Allocation Graphs</p>
-        </header>
 
-        <div class="control-panel">
-            <div class="card process-card">
-                <h2><i class="fas fa-microchip"></i> Processes</h2>
-                <button id="createProcess" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> Add Process
-                </button>
-            </div>
+<!-- ====== NAV ====== -->
+<nav class="tab-nav">
+    <div class="nav-brand">
+        <span class="brand-icon">⬡</span>
+        <span>DeadlockOS</span>
+    </div>
+    <div class="nav-tabs">
+        <button class="tab-btn active" data-tab="learn">📖 Learn</button>
+        <button class="tab-btn" data-tab="simulate">🧪 Simulate</button>
+    </div>
+</nav>
 
-            <div class="card resource-card">
-                <h2><i class="fas fa-database"></i> Resources</h2>
-                <div class="input-group">
-                    <label for="numInstances">Instances:</label>
-                    <input type="number" id="numInstances" min="1" value="1">
-                </div>
-                <button id="createResource" class="btn btn-primary">
-                    <i class="fas fa-plus-circle"></i> Add Resource
-                </button>
-            </div>
+<!-- ====== LEARN TAB ====== -->
+<section id="tab-learn" class="tab-content active">
 
-            <div class="card edge-card">
-                <h2><i class="fas fa-project-diagram"></i> Edges</h2>
-                
-                <div class="edge-controls">
-                    <div class="edge-section">
-                        <h3>Request Edge</h3>
-                        <div class="input-group">
-                            <label for="requestProcess">Process:</label>
-                            <input type="number" id="requestProcess" min="1" value="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="requestResource">Resource:</label>
-                            <input type="number" id="requestResource" min="1" value="1">
-                        </div>
-                        <button id="createRequestEdge" class="btn btn-secondary">
-                            <i class="fas fa-arrow-right"></i> Add Request
-                        </button>
-                    </div>
-
-                    <div class="edge-section">
-                        <h3>Allocation Edge</h3>
-                        <div class="input-group">
-                            <label for="allocResource">Resource:</label>
-                            <input type="number" id="allocResource" min="1" value="1">
-                        </div>
-                        <div class="input-group">
-                            <label for="allocProcess">Process:</label>
-                            <input type="number" id="allocProcess" min="1" value="1">
-                        </div>
-                        <button id="createAllocationEdge" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Add Allocation
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card action-card">
-                <button id="detectDeadlock" class="btn btn-success">
-                    <i class="fas fa-search"></i> Detect Deadlock
-                </button>
-                <div id="result" class="result-display">
-                    System status will appear here
-                </div>
+    <div class="learn-hero">
+        <div class="hero-text">
+            <div class="hero-badge">Operating Systems</div>
+            <h1>Understanding <span class="accent">Deadlock</span></h1>
+            <p>A deep dive into one of OS's most notorious problems — when processes freeze forever, waiting for each other.</p>
+            <div class="hero-actions">
+                <button class="btn btn-primary" onclick="switchTab('simulate')">Try Simulator →</button>
+                <button class="btn btn-outline" onclick="scrollToSection('what-is')">Learn More ↓</button>
             </div>
         </div>
-
-        <div class="visualization-area">
-            <div class="processes-container">
-                <!-- Processes will be added here dynamically -->
-            </div>
-            <div class="resources-container">
-                <!-- Resources will be added here dynamically -->
+        <div class="hero-visual">
+            <div class="deadlock-anim">
+                <div class="anim-process" id="ap1">P1</div>
+                <div class="anim-process" id="ap2">P2</div>
+                <div class="anim-resource" id="ar1">R1</div>
+                <div class="anim-resource" id="ar2">R2</div>
+                <svg class="anim-svg" viewBox="0 0 300 200">
+                    <defs>
+                        <marker id="arrowRed" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L8,3 z" fill="#ff4757"/>
+                        </marker>
+                        <marker id="arrowGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                            <path d="M0,0 L0,6 L8,3 z" fill="#2ed573"/>
+                        </marker>
+                    </defs>
+                    <line x1="75" y1="55" x2="200" y2="55" stroke="#ff4757" stroke-width="2" marker-end="url(#arrowRed)" stroke-dasharray="5,3" class="anim-arrow"/>
+                    <line x1="220" y1="75" x2="220" y2="130" stroke="#2ed573" stroke-width="2" marker-end="url(#arrowGreen)" class="anim-arrow"/>
+                    <line x1="220" y1="150" x2="90" y2="150" stroke="#ff4757" stroke-width="2" marker-end="url(#arrowRed)" stroke-dasharray="5,3" class="anim-arrow"/>
+                    <line x1="65" y1="130" x2="65" y2="75" stroke="#2ed573" stroke-width="2" marker-end="url(#arrowGreen)" class="anim-arrow"/>
+                    <text x="150" y="108" text-anchor="middle" fill="#ff4757" font-size="12" font-weight="bold">DEADLOCK!</text>
+                </svg>
             </div>
         </div>
+    </div>
 
-        <div class="info-panel">
-            <h2><i class="fas fa-info-circle"></i> About Deadlocks</h2>
-            <p>A deadlock occurs when two or more processes are blocked forever, waiting for each other to release resources. The Resource Allocation Graph (RAG) helps visualize resource requests and allocations to detect potential deadlocks.</p>
-            <div class="legend">
-                <div class="legend-item">
-                    <div class="circle-demo"></div>
-                    <span>Process</span>
+    <!-- 01 What is Deadlock -->
+    <div class="learn-section" id="what-is">
+        <div class="section-header">
+            <div class="section-num">01</div>
+            <div>
+                <h2>What is a Deadlock?</h2>
+                <p>A deadlock occurs when a set of processes are permanently blocked, each waiting for a resource held by another process in the same set.</p>
+            </div>
+        </div>
+        <div class="info-grid">
+            <div class="info-card highlight">
+                <div class="info-icon">🔒</div>
+                <h3>Real-World Analogy</h3>
+                <p>Two cars on a narrow one-lane bridge, each waiting for the other to reverse. Neither moves forward, neither moves back. They are deadlocked.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">💻</div>
+                <h3>In Operating Systems</h3>
+                <p>Process A holds Resource 1 and waits for Resource 2. Process B holds Resource 2 and waits for Resource 1. Both are stuck indefinitely — a classic deadlock.</p>
+            </div>
+            <div class="info-card">
+                <div class="info-icon">⚠️</div>
+                <h3>Why It Matters</h3>
+                <p>Deadlocks can crash systems, cause data loss, or make applications completely unresponsive. Databases, OS kernels, and network systems must handle this carefully.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 02 Coffman Conditions -->
+    <div class="learn-section">
+        <div class="section-header">
+            <div class="section-num">02</div>
+            <div>
+                <h2>The 4 Coffman Conditions</h2>
+                <p>All four must hold simultaneously for a deadlock to occur. Break any one, and deadlock is impossible.</p>
+            </div>
+        </div>
+        <div class="conditions-grid">
+            <div class="condition-card">
+                <div class="condition-num">1</div>
+                <div class="condition-icon">🔐</div>
+                <h3>Mutual Exclusion</h3>
+                <p>At least one resource must be non-sharable. Only one process at a time can use it. If another requests it, that process must wait.</p>
+                <div class="condition-example"><code>Printer: Only 1 process can use it at a time</code></div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-num">2</div>
+                <div class="condition-icon">🤲</div>
+                <h3>Hold &amp; Wait</h3>
+                <p>A process holds at least one resource while waiting to acquire additional resources held by other processes.</p>
+                <div class="condition-example"><code>P1 holds R1, waits for R2</code></div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-num">3</div>
+                <div class="condition-icon">🚫</div>
+                <h3>No Preemption</h3>
+                <p>Resources cannot be forcefully taken from a process. They are only released voluntarily after the process completes its task.</p>
+                <div class="condition-example"><code>R1 cannot be taken from P1 forcefully</code></div>
+            </div>
+            <div class="condition-card">
+                <div class="condition-num">4</div>
+                <div class="condition-icon">🔄</div>
+                <h3>Circular Wait</h3>
+                <p>A set {P0, P1, …, Pn} exists where P0 waits for P1, P1 waits for P2, …, Pn waits for P0.</p>
+                <div class="condition-example"><code>P1→P2→P3→P1 (cycle)</code></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 03 RAG -->
+    <div class="learn-section">
+        <div class="section-header">
+            <div class="section-num">03</div>
+            <div>
+                <h2>Resource Allocation Graph (RAG)</h2>
+                <p>A directed graph that visualizes which resources are held and requested by which processes.</p>
+            </div>
+        </div>
+        <div class="rag-explainer">
+            <div class="rag-legend-detailed">
+                <div class="rl-item">
+                    <div class="rl-symbol process-sym">P</div>
+                    <div class="rl-desc">
+                        <strong>Process Node (Circle)</strong>
+                        <span>Represents an active process in the system</span>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="rect-demo"></div>
-                    <span>Resource</span>
+                <div class="rl-item">
+                    <div class="rl-symbol resource-sym">■</div>
+                    <div class="rl-desc">
+                        <strong>Resource Node (Rectangle)</strong>
+                        <span>Dots inside = number of available instances</span>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="arrow-demo request-demo"></div>
-                    <span>Request</span>
+                <div class="rl-item">
+                    <div class="rl-symbol arrow-sym req-sym">→</div>
+                    <div class="rl-desc">
+                        <strong>Request Edge (P → R)</strong>
+                        <span>Process is requesting a resource it doesn't have yet</span>
+                    </div>
                 </div>
-                <div class="legend-item">
-                    <div class="arrow-demo alloc-demo"></div>
-                    <span>Allocation</span>
+                <div class="rl-item">
+                    <div class="rl-symbol arrow-sym alloc-sym">→</div>
+                    <div class="rl-desc">
+                        <strong>Allocation Edge (R → P)</strong>
+                        <span>Resource has been allocated to this process</span>
+                    </div>
+                </div>
+            </div>
+            <div class="rag-rules">
+                <h3>Deadlock Detection Rules</h3>
+                <ul class="rules-list">
+                    <li><span class="rule-icon">✅</span><strong>No cycle</strong> in the graph → No deadlock possible</li>
+                    <li><span class="rule-icon">🔴</span><strong>Cycle + single-instance resources</strong> → Deadlock exists</li>
+                    <li><span class="rule-icon">⚠️</span><strong>Cycle + multi-instance resources</strong> → Deadlock <em>may or may not</em> exist — further analysis needed</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 04 WFG & Algorithm -->
+    <div class="learn-section">
+        <div class="section-header">
+            <div class="section-num">04</div>
+            <div>
+                <h2>Wait-For Graph &amp; Detection Algorithm</h2>
+                <p>The WFG simplifies the RAG by removing resource nodes, making cycle detection straightforward with DFS.</p>
+            </div>
+        </div>
+        <div class="wfg-explainer">
+            <div class="wfg-text">
+                <p>Derived from the RAG by collapsing resource nodes. If Pi requested Rk which is held by Pj, add edge Pi → Pj.</p>
+                <ul class="wfg-steps">
+                    <li><span>1</span> Start with the Resource Allocation Graph</li>
+                    <li><span>2</span> Remove all resource nodes (rectangles)</li>
+                    <li><span>3</span> If Pi → Rk and Rk → Pj, draw Pi → Pj directly</li>
+                    <li><span>4</span> Run DFS — a back edge = cycle = Deadlock!</li>
+                </ul>
+                <div class="algo-box">
+                    <div class="algo-title">DFS Cycle Detection (used in the Simulator)</div>
+                    <pre>
+function dfs(node, visited, recStack):
+    visited[node] = true
+    recStack[node] = true
+
+    for each neighbor of node:
+        if not visited[neighbor]:
+            if dfs(neighbor, visited, recStack):
+                return true   // Cycle found!
+        elif recStack[neighbor]:
+            return true       // Back edge → Cycle!
+
+    recStack[node] = false
+    return false</pre>
+                </div>
+            </div>
+            <div class="wfg-diagram">
+                <div class="diagram-label">RAG → WFG Conversion</div>
+                <div class="diagram-box">
+                    <div class="diagram-half">
+                        <div class="diag-title">RAG</div>
+                        <svg viewBox="0 0 200 160" class="diag-svg">
+                            <defs>
+                                <marker id="dRed" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ff4757"/></marker>
+                                <marker id="dGreen" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#2ed573"/></marker>
+                            </defs>
+                            <circle cx="40" cy="35" r="18" fill="#f39c12" stroke="#fff" stroke-width="1.5"/>
+                            <text x="40" y="40" text-anchor="middle" fill="#000" font-size="11" font-weight="bold">P1</text>
+                            <circle cx="160" cy="35" r="18" fill="#f39c12" stroke="#fff" stroke-width="1.5"/>
+                            <text x="160" y="40" text-anchor="middle" fill="#000" font-size="11" font-weight="bold">P2</text>
+                            <rect x="80" y="90" width="40" height="28" rx="4" fill="#2ecc71" stroke="#fff" stroke-width="1.5"/>
+                            <circle cx="100" cy="104" r="5" fill="#000"/>
+                            <text x="100" y="135" text-anchor="middle" fill="#aaa" font-size="10">R1</text>
+                            <line x1="52" y1="48" x2="82" y2="90" stroke="#ff4757" stroke-width="1.5" stroke-dasharray="4,2" marker-end="url(#dRed)"/>
+                            <line x1="118" y1="90" x2="148" y2="48" stroke="#2ed573" stroke-width="1.5" marker-end="url(#dGreen)"/>
+                        </svg>
+                    </div>
+                    <div class="diagram-arrow">→</div>
+                    <div class="diagram-half">
+                        <div class="diag-title">WFG</div>
+                        <svg viewBox="0 0 200 160" class="diag-svg">
+                            <defs>
+                                <marker id="dRed2" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#ff4757"/></marker>
+                            </defs>
+                            <circle cx="55" cy="80" r="22" fill="#f39c12" stroke="#fff" stroke-width="1.5"/>
+                            <text x="55" y="85" text-anchor="middle" fill="#000" font-size="12" font-weight="bold">P1</text>
+                            <circle cx="145" cy="80" r="22" fill="#f39c12" stroke="#fff" stroke-width="1.5"/>
+                            <text x="145" y="85" text-anchor="middle" fill="#000" font-size="12" font-weight="bold">P2</text>
+                            <line x1="77" y1="75" x2="123" y2="75" stroke="#ff4757" stroke-width="2" marker-end="url(#dRed2)"/>
+                            <text x="100" y="63" text-anchor="middle" fill="#888" font-size="10">waits for</text>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="js/deadlock_detection.js"></script>
+    <!-- 05 Handling Strategies -->
+    <div class="learn-section">
+        <div class="section-header">
+            <div class="section-num">05</div>
+            <div>
+                <h2>Deadlock Handling Strategies</h2>
+                <p>Operating systems use four main approaches. Click each to learn more.</p>
+            </div>
+        </div>
+        <div class="methods-grid">
+            <div class="method-card" onclick="showMethod('prevention')">
+                <div class="method-icon">🛡️</div>
+                <h3>Prevention</h3>
+                <p>Design so at least one Coffman condition can never hold.</p>
+                <div class="method-tag">Proactive</div>
+            </div>
+            <div class="method-card" onclick="showMethod('avoidance')">
+                <div class="method-icon">🧭</div>
+                <h3>Avoidance</h3>
+                <p>Use algorithms to ensure the system stays in a safe state.</p>
+                <div class="method-tag">Smart Scheduling</div>
+            </div>
+            <div class="method-card active" onclick="showMethod('detection')">
+                <div class="method-icon">🔍</div>
+                <h3>Detection</h3>
+                <p>Allow deadlocks, detect them via cycle detection in WFG.</p>
+                <div class="method-tag">Reactive</div>
+            </div>
+            <div class="method-card" onclick="showMethod('ignorance')">
+                <div class="method-icon">🙈</div>
+                <h3>Ignorance</h3>
+                <p>Assume deadlocks are rare; restart system if one occurs.</p>
+                <div class="method-tag">Ostrich Algorithm</div>
+            </div>
+        </div>
+        <div class="method-detail-box">
+            <div id="md-prevention" class="md-content hidden">
+                <h3>🛡️ Deadlock Prevention</h3>
+                <p>Prevent at least one of the four conditions from ever holding:</p>
+                <ul>
+                    <li><strong>Eliminate Mutual Exclusion:</strong> Use sharable resources where possible (e.g., read-only files).</li>
+                    <li><strong>Eliminate Hold &amp; Wait:</strong> Require processes to request all resources at once, or release all before requesting more.</li>
+                    <li><strong>Allow Preemption:</strong> If a process can't get what it needs, preempt its current resources and restart it.</li>
+                    <li><strong>Eliminate Circular Wait:</strong> Impose a total ordering on resources; processes must request in increasing order only.</li>
+                </ul>
+            </div>
+            <div id="md-avoidance" class="md-content hidden">
+                <h3>🧭 Deadlock Avoidance</h3>
+                <p>Requires advance knowledge of maximum resource needs. The OS keeps the system in a <strong>safe state</strong> — one where all processes can eventually finish.</p>
+                <ul>
+                    <li>Each process declares its maximum resource requirements upfront.</li>
+                    <li>Before granting a request, OS checks if granting it keeps the system in a safe state.</li>
+                    <li>If yes → grant. If no → make the process wait.</li>
+                    <li>Common algorithm: <strong>Banker's Algorithm</strong> by Dijkstra.</li>
+                </ul>
+            </div>
+            <div id="md-detection" class="md-content">
+                <h3>🔍 Deadlock Detection &amp; Recovery</h3>
+                <p>Allow deadlocks to happen, then detect and recover:</p>
+                <ul>
+                    <li><strong>Detection:</strong> Periodically run DFS cycle detection on the Wait-For Graph (WFG).</li>
+                    <li><strong>Recovery — Process Termination:</strong> Kill one or all deadlocked processes to break the cycle.</li>
+                    <li><strong>Recovery — Resource Preemption:</strong> Forcefully take resources from some processes and give to others.</li>
+                    <li>The <strong>Simulate tab</strong> demonstrates this interactively!</li>
+                </ul>
+            </div>
+            <div id="md-ignorance" class="md-content hidden">
+                <h3>🙈 Ignorance (Ostrich Algorithm)</h3>
+                <p>Simply ignore the possibility of deadlock entirely.</p>
+                <ul>
+                    <li>If a deadlock occurs, the user restarts the system or application.</li>
+                    <li>Used by most general-purpose OSes (Windows, Linux) in many practical situations.</li>
+                    <li>Rationale: Deadlocks are infrequent enough that overhead of prevention/detection isn't always worth it.</li>
+                    <li>Named after the myth of ostriches burying their heads in the sand.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</section>
+
+<!-- ====== SIMULATE TAB ====== -->
+<section id="tab-simulate" class="tab-content">
+    <div class="sim-layout">
+
+        <!-- Left: Controls -->
+        <div class="sim-controls">
+            <div class="ctrl-header">
+                <h2>🧪 Simulator</h2>
+                <button class="btn btn-danger btn-sm" onclick="resetAll()">↺ Reset</button>
+            </div>
+
+            <div class="ctrl-card">
+                <h3>⚙️ Processes</h3>
+                <div class="ctrl-row">
+                    <button class="btn btn-primary" onclick="createProcess()">+ Add Process</button>
+                    <span class="count-badge" id="process-count">0 processes</span>
+                </div>
+            </div>
+
+            <div class="ctrl-card">
+                <h3>🗄️ Resources</h3>
+                <div class="ctrl-row">
+                    <label>Instances:</label>
+                    <input type="number" id="numInstances" min="1" max="5" value="1" class="num-input">
+                </div>
+                <div class="ctrl-row">
+                    <button class="btn btn-primary" onclick="createResource()">+ Add Resource</button>
+                    <span class="count-badge" id="resource-count">0 resources</span>
+                </div>
+            </div>
+
+            <div class="ctrl-card">
+                <h3>🔗 Add Edges</h3>
+                <div class="edge-section">
+                    <div class="edge-title req">→ Request Edge (P → R)</div>
+                    <div class="ctrl-row">
+                        <label>Process P</label>
+                        <input type="number" id="requestProcess" min="1" value="1" class="num-input">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>Resource R</label>
+                        <input type="number" id="requestResource" min="1" value="1" class="num-input">
+                    </div>
+                    <button class="btn btn-req" onclick="createRequestEdge()">Add Request Edge</button>
+                </div>
+                <div class="edge-section">
+                    <div class="edge-title alloc">← Allocation Edge (R → P)</div>
+                    <div class="ctrl-row">
+                        <label>Resource R</label>
+                        <input type="number" id="allocResource" min="1" value="1" class="num-input">
+                    </div>
+                    <div class="ctrl-row">
+                        <label>Process P</label>
+                        <input type="number" id="allocProcess" min="1" value="1" class="num-input">
+                    </div>
+                    <button class="btn btn-alloc" onclick="createAllocationEdge()">Add Allocation Edge</button>
+                </div>
+            </div>
+
+            <div class="ctrl-card">
+                <h3>📦 Load Scenario</h3>
+                <div class="preset-btns">
+                    <button class="preset-btn" onclick="loadPreset('deadlock2')">🔴 2-Process Deadlock</button>
+                    <button class="preset-btn" onclick="loadPreset('deadlock3')">🔴 3-Process Deadlock</button>
+                    <button class="preset-btn" onclick="loadPreset('safe')">🟢 Safe State (No Deadlock)</button>
+                    <button class="preset-btn" onclick="loadPreset('multiinstance')">🟡 Multi-Instance Resource</button>
+                </div>
+            </div>
+
+            <button class="btn-detect" onclick="detectDeadlock()">🔍 Detect Deadlock</button>
+
+            <div id="result-panel" class="result-panel">
+                <div id="result-icon">⬡</div>
+                <div id="result-text">Run detection to see results</div>
+                <div id="result-detail"></div>
+            </div>
+
+            <div class="ctrl-card matrix-card" id="matrix-section" style="display:none">
+                <h3>📊 RAG Matrix</h3>
+                <p class="matrix-hint">Positive = Request &nbsp;|&nbsp; Negative = Allocation</p>
+                <div id="rag-matrix-display"></div>
+            </div>
+        </div>
+
+        <!-- Right: Visualization -->
+        <div class="sim-visual">
+            <div class="visual-header">
+                <span>Resource Allocation Graph</span>
+                <div class="legend-mini">
+                    <span class="lm-item"><span class="lm-circle"></span>Process</span>
+                    <span class="lm-item"><span class="lm-rect"></span>Resource</span>
+                    <span class="lm-item"><span class="lm-line req-line"></span>Request</span>
+                    <span class="lm-item"><span class="lm-line alloc-line"></span>Allocation</span>
+                </div>
+            </div>
+            <div class="visualization-area" id="vis-area">
+                <div class="vis-empty" id="vis-empty">
+                    <div class="vis-empty-icon">📊</div>
+                    <p>Add processes and resources to build your graph</p>
+                    <p>Or load a preset scenario from the left panel</p>
+                </div>
+                <div class="processes-container" id="processes-container"></div>
+                <div class="resources-container" id="resources-container"></div>
+                <svg class="edges-svg" id="edges-svg"></svg>
+            </div>
+
+            <div class="detection-log">
+                <div class="log-header">
+                    <span>🔎 Detection Log</span>
+                    <button class="btn-clear-log" onclick="clearLog()">Clear</button>
+                </div>
+                <div class="log-entries" id="log-entries">
+                    <div class="log-entry log-info">Waiting for detection to run...</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+
+<div class="toast" id="toast"></div>
+<script src="js/app.js"></script>
 </body>
 </html>
