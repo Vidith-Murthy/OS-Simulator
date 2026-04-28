@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAID Simulator — OS Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="raid.css">
+</head>
+<body>
+
+    <!-- Loader -->
+    <div class="loader-wrapper" id="loader">
+        <div class="loader"></div>
+        <span class="loader-text">Initializing RAID Simulator</span>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-content">
+            
+            <div class="nav-title">
+                <span class="nav-icon"><i class="fas fa-hdd"></i></span>
+                <h1>RAID <span class="title-accent">Simulator</span></h1>
+            </div>
+            <div class="nav-badge">OS Visualizer</div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container">
+
+        <!-- RAID Introduction Section -->
+        <section class="raid-intro-section">
+            
+            <h1 class="section-title">Understanding RAID</h1>
+            <p class="section-subtitle">// redundant_array_of_independent_disks</p>
+
+            <div class="intro-card">
+                <div class="intro-tag">OVERVIEW</div>
+                <h2>What is RAID?</h2>
+                <p>RAID (Redundant Array of Independent Disks) is a data storage technology that combines multiple disks to improve performance and/or provide redundancy. RAID allows data to be stored across multiple drives, either for increased speed, improved reliability, or both.</p>
+                <div class="raid-benefits">
+                    <div class="benefit-item">
+                        <div class="benefit-icon-wrap"><i class="fas fa-tachometer-alt"></i></div>
+                        <h3>Performance</h3>
+                        <p>Multiple disks work in parallel for faster data access</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon-wrap"><i class="fas fa-shield-alt"></i></div>
+                        <h3>Redundancy</h3>
+                        <p>Data protection through mirroring or parity schemes</p>
+                    </div>
+                    <div class="benefit-item">
+                        <div class="benefit-icon-wrap"><i class="fas fa-layer-group"></i></div>
+                        <h3>Capacity</h3>
+                        <p>Combine multiple drives into larger storage systems</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RAID Levels Section -->
+        <section class="raid-levels-section">
+            <div class="section-eyebrow">
+                <span class="eyebrow-line"></span>
+                <span class="eyebrow-text">Select a Configuration</span>
+                <span class="eyebrow-line"></span>
+            </div>
+            <h2 class="section-title">RAID Levels</h2>
+            <p class="section-subtitle">// click_card_to_simulate</p>
+
+            <div class="raid-cards-grid">
+                <div class="raid-card" onclick="selectRAID('raid0')">
+                    <div class="raid-card-num">00</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 0</h3>
+                        <span class="card-label">Striping</span>
+                    </div>
+                    <p class="card-description">Data is divided into blocks and distributed across multiple disks</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">2</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-none">None</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid1')">
+                    <div class="raid-card-num">01</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 1</h3>
+                        <span class="card-label">Mirroring</span>
+                    </div>
+                    <p class="card-description">Data is duplicated on two disks for complete redundancy</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">disks</span><span class="sv">2 (Paired)</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Full</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid2')">
+                    <div class="raid-card-num">02</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 2</h3>
+                        <span class="card-label">Hamming Code</span>
+                    </div>
+                    <p class="card-description">Bit-level striping with Hamming code error correction</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">3</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv">ECC</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid3')">
+                    <div class="raid-card-num">03</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 3</h3>
+                        <span class="card-label">Byte Parity</span>
+                    </div>
+                    <p class="card-description">Byte-level striping with a dedicated parity disk</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">3</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv">Single Disk</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid4')">
+                    <div class="raid-card-num">04</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 4</h3>
+                        <span class="card-label">Block Parity</span>
+                    </div>
+                    <p class="card-description">Block-level striping with a dedicated parity disk</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">3</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv">Single Disk</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid5')">
+                    <div class="raid-card-num">05</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 5</h3>
+                        <span class="card-label">Distributed Parity</span>
+                    </div>
+                    <p class="card-description">Block-level striping with parity distributed across all disks</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">3</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Best Balance</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card" onclick="selectRAID('raid6')">
+                    <div class="raid-card-num">06</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 6</h3>
+                        <span class="card-label">Dual Parity</span>
+                    </div>
+                    <p class="card-description">Similar to RAID 5 but with two independent parity schemes</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">4</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Two Disks</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Selected RAID Detail Section -->
+        <section id="detail-section" class="detail-section" style="display: none;">
+            <div class="detail-section-bar"></div>
+            <h2 class="section-title detail-title" id="raid-title">Select a RAID Level</h2>
+
+            <div class="detail-content">
+                <div class="info-card">
+                    <div class="info-card-tag">DESCRIPTION</div>
+                    <p id="raid-description">Please select a RAID level to begin the simulation.</p>
+                </div>
+
+                <div class="raid-characteristics">
+                    <div class="char-item">
+                        <h4><i class="fas fa-key"></i> Key Features</h4>
+                        <ul id="raid-features"></ul>
+                    </div>
+                    <div class="char-item">
+                        <h4><i class="fas fa-plus-circle"></i> Advantages</h4>
+                        <ul id="raid-advantages"></ul>
+                    </div>
+                    <div class="char-item">
+                        <h4><i class="fas fa-minus-circle"></i> Disadvantages</h4>
+                        <ul id="raid-disadvantages"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation wrap: hidden for RAID 2/3/4 -->
+            <div id="simulation-wrap">
+
+                <!-- Control Section -->
+                <div class="control-section">
+                    <div class="control-label-bar">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>Simulation Parameters</span>
+                    </div>
+                    <div class="control-inputs">
+                        <div class="input-group">
+                            <label for="disk-count"><i class="fas fa-hdd"></i> Number of Disks (2–5)</label>
+                            <input type="number" id="disk-count" min="2" max="5" value="2" oninput="onDiskCountChange()">
+                            <span id="disk-limit-hint" class="disk-limit-hint">Range: 2–5</span>
+                        </div>
+
+                        <div class="input-group">
+                            <label for="block-count"><i class="fas fa-th"></i> Number of Blocks</label>
+                            <input type="number" id="block-count" min="1" max="10" value="4">
+                            <span id="block-limit-hint" class="block-limit-hint">Max: 10 (2 disks × 5)</span>
+                        </div>
+
+                        <button class="start-btn" onclick="initializeSimulation()">
+                            <i class="fas fa-play"></i> Run Simulation
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visualization Section -->
+                <div class="visualization-section">
+                    <h3><i class="fas fa-project-diagram"></i> Disk Layout &amp; Animation</h3>
+                    <div id="sim-canvas" class="sim-canvas">
+                        <div id="animation-area" class="animation-area"></div>
+                        <div id="disks-container" class="disks-container"></div>
+                    </div>
+                    <div id="block-visualization" class="block-visualization"></div>
+                </div>
+
+            </div><!-- /simulation-wrap -->
+
+            
+        </section>
+
+    </div>
+
+    <footer class="raid-footer">
+        <div class="footer-inner">
+            <span class="footer-brand">OS Visualizer</span>
+            <span class="footer-dot">·</span>
+            <span class="footer-module">RAID Simulator</span>
+        </div>
+    </footer>
+
+    <script src="raid.js"></script>
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                const lw = document.getElementById('loader');
+                lw.style.opacity = '0';
+                lw.style.visibility = 'hidden';
+            }, 900);
+        });
+        window.addEventListener('scroll', function () {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 40);
+        });
+    </script>
+</body>
+</html>

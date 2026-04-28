@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MEMFIT</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #0a0a0a;
+  --s1:     #111111;
+  --s2:     #161616;
+  --s3:     #1c1c1c;
+  --b:      #252525;
+  --b2:     #555555;
+  --text:   #e8e8e8;
+  --sub:    #a0a0a0;
+  --dim:    #505050;
+  --mono:   'Space Mono', monospace;
+  --sans:   'Syne', sans-serif;
+  --a:      #60a5fa;
+  --ag:     rgba(96,165,250,0.10);
+  --ab:     rgba(96,165,250,0.25);
+}
+body.algo-first { --a:#60a5fa; --ag:rgba(96,165,250,0.10); --ab:rgba(96,165,250,0.28); }
+body.algo-best  { --a:#34d399; --ag:rgba(52,211,153,0.10); --ab:rgba(52,211,153,0.28); }
+body.algo-worst { --a:#f87171; --ag:rgba(248,113,113,0.10); --ab:rgba(248,113,113,0.28); }
+body.algo-next  { --a:#fb923c; --ag:rgba(251,146,60,0.10);  --ab:rgba(251,146,60,0.28);  }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+
+html{font-size:13px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* Noise overlay to match index.html */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.5;
+}
+
+/* ── HEADER ── */
+header{
+  height:48px;flex-shrink:0;
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--b);
+  background:var(--s1);
+}
+.hdr-logo{
+  display:flex;align-items:center;gap:9px;
+  padding:0 20px;border-right:1px solid var(--b);flex-shrink:0;
+}
+.logo-mark{
+  width:22px;height:22px;
+  display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px;
+}
+.logo-mark span{border-radius:2px;background:var(--a);transition:background 0.3s}
+.logo-mark span:nth-child(2){opacity:0.55}
+.logo-mark span:nth-child(3){opacity:0.3}
+.logo-mark span:nth-child(4){opacity:0.12}
+.logo-name{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:3px;color:var(--text)}
+
+.hdr-tabs{display:flex;align-items:stretch;flex:1;padding:0 12px;gap:2px}
+.tab{
+  display:flex;align-items:center;gap:7px;padding:0 16px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:0.8px;
+  color:var(--sub);background:none;border:none;cursor:pointer;
+  border-bottom:2px solid transparent;transition:color 0.2s,border-color 0.2s;
+  margin-bottom:-1px;
+}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--a);border-bottom-color:var(--a)}
+.tab-pip{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0}
+.tab.active .tab-pip{box-shadow:0 0 8px currentColor}
+
+.hdr-right{display:flex;align-items:center;gap:8px;padding:0 20px;border-left:1px solid var(--b);font-family:var(--mono);font-size:10px;color:var(--sub)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+
+/* ── BODY LAYOUT ── */
+.app-body{flex:1;display:grid;grid-template-columns:280px 1fr 240px;overflow:hidden;min-height:0}
+
+.pane{border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden}
+.pane:last-child{border-right:none}
+.pane-head{
+  padding:12px 16px;border-bottom:1px solid var(--b);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;background:var(--s1);
+}
+.pane-title{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--sub)}
+.pane-badge{
+  font-family:var(--mono);font-size:9px;
+  color:var(--a);background:var(--ag);border:1px solid var(--ab);
+  padding:2px 8px;border-radius:20px;transition:all 0.3s;
+}
+.pane-scroll{flex:1;overflow-y:auto;padding:14px}
+.pane-scroll::-webkit-scrollbar{width:3px}
+.pane-scroll::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+
+
+/* ── LEFT ── */
+.info-card{
+  background:var(--s2);border:1px solid var(--b);border-left:2px solid var(--a);
+  border-radius:0 6px 6px 0;padding:11px 13px;margin-bottom:16px;transition:border-color 0.3s;
+}
+.info-card p{font-size:11.5px;color:var(--sub);line-height:1.75}
+.info-card strong{color:var(--a);font-weight:600;transition:color 0.3s}
+
+.section-hd{
+  font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--dim);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--b);
+}
+
+.chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.chip{
+  font-family:var(--mono);font-size:10px;font-weight:700;
+  background:var(--s3);border:1px solid var(--b2);
+  color:var(--sub);border-radius:4px;padding:4px 10px;
+  cursor:pointer;transition:all 0.15s;user-select:none;
+}
+.chip:hover{background:var(--ag);border-color:var(--ab);color:var(--a)}
+.chip:active{transform:scale(0.94)}
+
+.inp-row{display:flex;gap:7px;margin-bottom:12px}
+.inp{
+  flex:1;background:var(--s2);border:1px solid var(--b);border-radius:5px;
+  padding:8px 11px;font-family:var(--mono);font-size:13px;color:var(--text);
+  outline:none;transition:border-color 0.2s,box-shadow 0.2s;min-width:0;
+}
+.inp::placeholder{color:var(--dim)}
+.inp:focus{border-color:var(--a);box-shadow:0 0 0 2px var(--ag)}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.inp.shake{animation:shake 0.28s ease;border-color:var(--fail,#f87171)}
+
+.btn{
+  font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.8px;
+  text-transform:uppercase;border:none;border-radius:5px;
+  padding:8px 13px;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0;
+}
+.btn-add{background:var(--a);color:#0c0e14}
+.btn-add:hover{filter:brightness(1.15)}
+.btn-add:active{transform:scale(0.96)}
+.btn-alloc{background:var(--ag);color:var(--a);border:1px solid var(--ab)}
+.btn-alloc:hover{background:var(--ab)}
+.btn-reset{width:100%;background:transparent;color:var(--dim);border:1px solid var(--b);padding:7px;margin-top:4px;}
+.btn-reset:hover{color:var(--fail,#f87171);border-color:var(--fail,#f87171)}
+.sep{height:1px;background:var(--b);margin:14px 0}
+
+/* fail colour used for shake/reset hover */
+:root { --fail: #f87171; }
+
+/* ── CENTER: MEMORY MAP ── */
+.map-pane{background:var(--s1)}
+.map-scroll{
+  flex:1;overflow-y:auto;overflow-x:auto;
+  padding:24px 20px;
+  display:flex;align-items:flex-start;justify-content:center;
+}
+.map-scroll::-webkit-scrollbar{width:3px;height:3px}
+.map-scroll::-webkit-scrollbar-thumb{background:var(--dim)}
+
+.mem-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;color:var(--dim);width:100%;height:100%;min-height:300px;
+}
+.mem-empty-icon{font-size:38px;opacity:0.2}
+.mem-empty p{font-family:var(--mono);font-size:10px;letter-spacing:2px;text-transform:uppercase}
+
+/* columns wrapper */
+.mem-cols{display:flex;align-items:flex-start;gap:16px}
+
+.mem-col{display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0}
+
+/* cap above each column-block */
+.vb-cap{
+  width:110px;display:flex;justify-content:space-between;align-items:center;
+  padding:2px 4px;margin-top:8px;
+}
+.vb-cap:first-child{margin-top:0}
+.vb-id{font-family:var(--mono);font-size:9px;color:var(--sub)}
+.vb-sz{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+/* the visual block */
+.vblock{
+  width:110px;position:relative;overflow:hidden;
+  border:1px solid var(--a);border-radius:4px;
+  box-shadow:0 0 8px 1px var(--ag), inset 0 0 12px 0px var(--ag);
+  transition:border-color 0.3s,box-shadow 0.3s;
+}
+.vblock.nf-active{
+  border-color: var(--a);
+  outline: 2px solid var(--ab);
+  outline-offset: 2px;
+  animation: glowPulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes glowPulse{
+  from{ outline-color: var(--ag); outline-offset: 1px; }
+  to{   outline-color: var(--ab); outline-offset: 4px; }
+}
+
+/* segment */
+.vseg{
+  width:100%;position:relative;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  overflow:hidden;flex-shrink:0;
+}
+.vseg.used{
+  background:var(--ag);
+  box-shadow:inset 3px 0 0 var(--a),inset -3px 0 0 var(--a),inset 0 -1px 0 var(--ab);
+  transition:background 0.3s,box-shadow 0.3s;
+}
+.vseg.used.new-seg{animation:segIn 0.38s cubic-bezier(0.34,1.4,0.64,1) both}
+@keyframes segIn{from{opacity:0;transform:scaleY(0.55)}to{opacity:1;transform:scaleY(1)}}
+.vseg.free{
+  background:repeating-linear-gradient(
+    -45deg,
+    transparent,transparent 5px,
+    rgba(255,255,255,0.015) 5px,rgba(255,255,255,0.015) 6px
+  );
+}
+.vseg-pid{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--a);transition:color 0.3s;line-height:1}
+.vseg-kb{font-family:var(--mono);font-size:9px;color:var(--sub);margin-top:2px}
+.vseg-free{font-family:var(--mono);font-size:9px;color:var(--dim)}
+
+.col-foot{
+  margin-top:5px;width:110px;text-align:center;
+  font-family:var(--mono);font-size:9px;color:var(--dim);letter-spacing:0.5px;
+}
+
+/* address ruler on left of each col */
+.vb-ruler{
+  width:28px;display:flex;flex-direction:column;align-items:flex-end;
+  padding-right:6px;font-family:var(--mono);font-size:8px;color:var(--dim);
+  gap:0;flex-shrink:0;
+}
+
+.col-with-ruler{display:flex;align-items:flex-start;gap:0}
+
+/* ── RIGHT: STATS ── */
+.stats-pane{background:var(--bg)}
+.stat-grp{margin-bottom:18px}
+.stat-grp-hd{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:9px;padding-bottom:7px;border-bottom:1px solid var(--b)}
+.stat-row{display:flex;justify-content:space-between;align-items:baseline;padding:6px 0;border-bottom:1px solid rgba(37,45,66,0.5)}
+.stat-row:last-child{border-bottom:none}
+.stat-k{font-family:var(--mono);font-size:10px;color:var(--sub)}
+.stat-v{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--text)}
+.stat-v.hi{color:var(--a);transition:color 0.3s}
+.ubar-wrap{margin-top:12px}
+.ubar-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:4px}
+.ubar{height:5px;background:var(--s3);border-radius:3px;overflow:hidden}
+.ubar-fill{height:100%;background:var(--a);border-radius:3px;transition:width 0.4s ease,background 0.3s}
+
+.log-list{display:flex;flex-direction:column;gap:5px}
+.log-item{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;background:var(--s1);border:1px solid var(--b);border-radius:4px;animation:fadeUp 0.2s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.log-item.ok  {border-left:2px solid #34d399}
+.log-item.fail{border-left:2px solid #f87171}
+.log-item.info{border-left:2px solid var(--dim)}
+.log-msg{font-family:var(--mono);font-size:10px;color:var(--sub);line-height:1.55;flex:1}
+.log-msg b{color:var(--text);font-weight:500}
+.log-t{font-family:var(--mono);font-size:9px;color:var(--dim);white-space:nowrap;margin-top:1px}
+</style>
+</head>
+<body class="algo-first">
+
+<header>
+  <div class="hdr-logo">
+    <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+    <span class="logo-name">MEMFIT</span>
+  </div>
+  <div class="hdr-tabs">
+    <button class="tab active" data-algo="first" onclick="switchAlgo('first')"><span class="tab-pip"></span>First Fit</button>
+    <button class="tab" data-algo="best"  onclick="switchAlgo('best')"><span class="tab-pip"></span>Best Fit</button>
+    <button class="tab" data-algo="worst" onclick="switchAlgo('worst')"><span class="tab-pip"></span>Worst Fit</button>
+    <button class="tab" data-algo="next"  onclick="switchAlgo('next')"><span class="tab-pip"></span>Next Fit</button>
+  </div>
+  <div class="hdr-right"><div class="live-dot"></div><span id="hdr-lbl">FIRST FIT</span></div>
+</header>
+
+<div class="app-body">
+
+  <!-- LEFT -->
+  <div class="pane">
+    <div class="pane-head">
+      <span class="pane-title">Controls</span>
+      <span class="pane-badge" id="badge-algo">first_fit</span>
+    </div>
+    <div class="pane-scroll">
+      <div class="info-card"><p id="algo-txt"></p></div>
+
+      <div class="section-hd">Memory Blocks</div>
+      <div class="chips">
+        <span class="chip" onclick="quickBlock(32)">32</span>
+        <span class="chip" onclick="quickBlock(64)">64</span>
+        <span class="chip" onclick="quickBlock(128)">128</span>
+        <span class="chip" onclick="quickBlock(256)">256</span>
+        <span class="chip" onclick="quickBlock(512)">512</span>
+      </div>
+      <div class="inp-row">
+        <input class="inp" type="number" id="inp-block" placeholder="Custom KB" min="1">
+        <button class="btn btn-add" onclick="addBlock()">+ Add</button>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="section-hd">Allocate Process</div>
+      <div class="chips">
+        <span class="chip" onclick="quickProc(8)">8</span>
+        <span class="chip" onclick="quickProc(16)">16</span>
+        <span class="chip" onclick="quickProc(32)">32</span>
+        <span class="chip" onclick="quickProc(64)">64</span>
+        <span class="chip" onclick="quickProc(100)">100</span>
+      </div>
+      <div class="inp-row">
+        <input class="inp" type="number" id="inp-proc" placeholder="Custom KB" min="1">
+        <button class="btn btn-alloc" onclick="allocate()">Alloc →</button>
+      </div>
+
+      <div class="sep"></div>
+      <button class="btn btn-reset" onclick="resetAll()">↺ Reset Memory</button>
+    </div>
+  </div>
+
+  <!-- CENTER: memory map -->
+  <div class="pane map-pane">
+    <div class="pane-head">
+      <span class="pane-title">Memory Map</span>
+      <span class="pane-badge" id="badge-map">0 blocks</span>
+    </div>
+    <div class="map-scroll" id="map-scroll">
+      <div class="mem-empty">
+        <div class="mem-empty-icon">▦</div>
+        <p>Add blocks to begin</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: stats -->
+  <div class="pane stats-pane">
+    <div class="pane-head">
+      <span class="pane-title">Stats &amp; Log</span>
+      <span class="pane-badge" id="badge-procs">0 procs</span>
+    </div>
+    <div class="pane-scroll">
+      <div class="stat-grp">
+        <div class="stat-grp-hd">Memory</div>
+        <div class="stat-row"><span class="stat-k">Total</span><span class="stat-v" id="st-total">0 KB</span></div>
+        <div class="stat-row"><span class="stat-k">Used</span><span class="stat-v hi" id="st-used">0 KB</span></div>
+        <div class="stat-row"><span class="stat-k">Free</span><span class="stat-v" id="st-free">0 KB</span></div>
+        <div class="ubar-wrap">
+          <div class="ubar-labels"><span>Utilization</span><span id="st-util">0%</span></div>
+          <div class="ubar"><div class="ubar-fill" id="ubar-fill" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="stat-grp">
+        <div class="stat-grp-hd">Allocation</div>
+        <div class="stat-row"><span class="stat-k">Blocks</span><span class="stat-v" id="st-blocks">0</span></div>
+        <div class="stat-row"><span class="stat-k">Processes</span><span class="stat-v hi" id="st-procs">0</span></div>
+        <div class="stat-row"><span class="stat-k">Failures</span><span class="stat-v" id="st-fails">0</span></div>
+      </div>
+      <div class="stat-grp">
+        <div class="stat-grp-hd">Log</div>
+        <div class="log-list" id="log-list"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CFGS = {
+  first:{ label:'FIRST FIT', badge:'first_fit', info:'<strong>First Fit</strong> — scans from B0, picks the <strong>first block</strong> with enough free space. Fast but loads the front of memory.' },
+  best: { label:'BEST FIT',  badge:'best_fit',  info:'<strong>Best Fit</strong> — full scan, picks the block with the <strong>smallest sufficient remainder</strong>. Minimises wasted space per allocation.' },
+  worst:{ label:'WORST FIT', badge:'worst_fit', info:'<strong>Worst Fit</strong> — full scan, always picks the <strong>largest available block</strong>, leaving the biggest remainder for future processes.' },
+  next: { label:'NEXT FIT',  badge:'next_fit',  info:'<strong>Next Fit</strong> — like First Fit but <strong>resumes from the last allocation point</strong>. Active pointer shown with accent glow.' }
+};
+
+const COL_LIMIT = 12;    // max columns before horizontal scroll takes over
+
+let algo='first', blocks=[], blockId=0, procId=1, lastIdx=-1, failCount=0;
+
+function quickBlock(n){ document.getElementById('inp-block').value=n; addBlock(); }
+function quickProc(n) { document.getElementById('inp-proc').value=n;  allocate(); }
+
+function switchAlgo(a){
+  algo=a;
+  document.body.className='algo-'+a;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.algo===a));
+  const c=CFGS[a];
+  document.getElementById('hdr-lbl').textContent    = c.label;
+  document.getElementById('badge-algo').textContent = c.badge;
+  document.getElementById('algo-txt').innerHTML     = c.info;
+  resetAll(true);
+}
+
+function addBlock(){
+  const inp=document.getElementById('inp-block');
+  const size=parseInt(inp.value);
+  if(!size||size<1){ shake(inp); return; }
+  blocks.push({id:blockId++, total:size, used:0, segs:[], newBlock:true});
+  inp.value=''; inp.focus();
+  renderMap();
+  updateStats();
+  log(`B${blocks[blocks.length-1].id} added (${size} KB)`,'info');
+  blocks[blocks.length-1].newBlock=false;
+}
+
+function allocate(){
+  const inp=document.getElementById('inp-proc');
+  const size=parseInt(inp.value);
+  if(!size||size<1){ shake(inp); return; }
+  if(!blocks.length){ log('No blocks — add memory first','fail'); failCount++; updateStats(); return; }
+
+  let idx=-1;
+  if(algo==='first'){
+    for(let i=0;i<blocks.length;i++) if(blocks[i].total-blocks[i].used>=size){idx=i;break;}
+  } else if(algo==='best'){
+    let best=Infinity;
+    for(let i=0;i<blocks.length;i++){
+      const r=blocks[i].total-blocks[i].used;
+      if(r>=size&&r-size<best){best=r-size;idx=i;}
+    }
+  } else if(algo==='worst'){
+    let worst=-1;
+    for(let i=0;i<blocks.length;i++){
+      const r=blocks[i].total-blocks[i].used;
+      if(r>=size&&r-size>worst){worst=r-size;idx=i;}
+    }
+  } else {
+    const start=(lastIdx+1)%blocks.length;
+    for(let i=0;i<blocks.length;i++){
+      const ci=(start+i)%blocks.length;
+      if(blocks[ci].total-blocks[ci].used>=size){idx=ci;break;}
+    }
+  }
+
+  const pid='P'+procId;
+  if(idx===-1){
+    log(`<b>${pid}</b> (${size} KB) — no fit`,'fail');
+    failCount++;
+  } else {
+    blocks[idx].segs.push({pid, size, isNew:true});
+    blocks[idx].used+=size;
+    lastIdx=idx; procId++;
+    log(`<b>${pid}</b> (${size} KB) → B${blocks[idx].id}, ${blocks[idx].total-blocks[idx].used} KB rem`,'ok');
+  }
+  inp.value=''; inp.focus();
+  renderMap();
+  updateStats();
+  // clear new flags
+  blocks.forEach(b=>b.segs.forEach(s=>s.isNew=false));
+}
+
+function resetAll(silent){
+  blocks=[];blockId=0;procId=1;lastIdx=-1;failCount=0;
+  renderMap(); updateStats();
+  document.getElementById('log-list').innerHTML='';
+  if(!silent) log('Memory reset','info');
+}
+
+function renderMap(){
+  const scroll=document.getElementById('map-scroll');
+  scroll.innerHTML='';
+
+  if(!blocks.length){
+    scroll.innerHTML='<div class="mem-empty"><div class="mem-empty-icon">▦</div><p>Add blocks to begin</p></div>';
+    document.getElementById('badge-map').textContent='0 blocks';
+    return;
+  }
+
+  document.getElementById('badge-map').textContent=
+    blocks.length+' block'+(blocks.length!==1?'s':'');
+
+  const PX_PER_KB = 0.6;
+  const COL_MAX_H = 460;
+
+  // distribute blocks into columns
+  const columns=[[]];
+  let colH=0, ci=0;
+  blocks.forEach((b,i)=>{
+    const bh=Math.round(b.total*PX_PER_KB);
+    if(colH+bh>COL_MAX_H && columns[ci].length>0 && ci<COL_LIMIT-1){
+      ci++; columns.push([]); colH=0;
+    }
+    columns[ci].push(i);
+    colH+=bh+32;
+  });
+
+  const wrapper=document.createElement('div');
+  wrapper.className='mem-cols';
+
+  columns.forEach(col=>{
+    const colEl=document.createElement('div');
+    colEl.className='mem-col';
+
+    col.forEach((bi)=>{
+      const b=blocks[bi];
+      const isNF=algo==='next'&&bi===lastIdx;
+      const BORDER=2; // 1px top + 1px bottom border-box
+      const blockH=Math.round(b.total*PX_PER_KB);
+      const innerH=blockH-BORDER;
+
+      // cap: id + size label
+      const cap=document.createElement('div');
+      cap.className='vb-cap';
+      cap.innerHTML=`<span class="vb-id">B${b.id}</span><span class="vb-sz">${b.total}KB</span>`;
+      colEl.appendChild(cap);
+
+      // block
+      const vb=document.createElement('div');
+      vb.className='vblock'+(isNF?' nf-active':'');
+      vb.style.height=blockH+'px';
+
+      // used segs — cumulative pixel positioning to eliminate rounding drift
+      let cumKB=0, cumPx=0;
+      b.segs.forEach((seg)=>{
+        const startPx=Math.round((cumKB/b.total)*innerH);
+        cumKB+=seg.size;
+        const endPx=Math.round((cumKB/b.total)*innerH);
+        const ph=endPx-startPx;
+        cumPx=endPx;
+        const el=document.createElement('div');
+        el.className='vseg used'+(seg.isNew?' new-seg':'');
+        el.style.height=ph+'px';
+        if(ph>=26){
+          el.innerHTML=`<span class="vseg-pid">${seg.pid}</span><span class="vseg-kb">${seg.size}KB</span>`;
+        } else if(ph>=13){
+          el.innerHTML=`<span class="vseg-pid" style="font-size:9px">${seg.pid}</span>`;
+        } else if(ph>=7){
+          el.innerHTML=`<span class="vseg-pid" style="font-size:7px;line-height:1">${seg.pid}</span>`;
+        }
+        vb.appendChild(el);
+      });
+
+      // free seg: derived from KB ratio against innerH
+      const rem=b.total-b.used;
+      if(rem>0){
+        const freePx=Math.round((rem/b.total)*innerH);
+        const el=document.createElement('div');
+        el.className='vseg free';
+        el.style.height=freePx+'px';
+        if(freePx>=22) el.innerHTML=`<span class="vseg-free">${rem}KB</span>`;
+        vb.appendChild(el);
+      }
+
+      colEl.appendChild(vb);
+    });
+
+    // col footer
+    const totalKB=col.reduce((s,bi)=>s+blocks[bi].total,0);
+    const foot=document.createElement('div');
+    foot.className='col-foot';
+    foot.textContent=totalKB+' KB';
+    colEl.appendChild(foot);
+
+    wrapper.appendChild(colEl);
+  });
+
+  scroll.appendChild(wrapper);
+}
+
+function updateStats(){
+  const total=blocks.reduce((s,b)=>s+b.total,0);
+  const used =blocks.reduce((s,b)=>s+b.used, 0);
+  const free =total-used;
+  const procs=blocks.reduce((s,b)=>s+b.segs.length,0);
+  const util =total>0?Math.round(used/total*100):0;
+  document.getElementById('st-total').textContent =total+' KB';
+  document.getElementById('st-used').textContent  =used +' KB';
+  document.getElementById('st-free').textContent  =free +' KB';
+  document.getElementById('st-util').textContent  =util +'%';
+  document.getElementById('st-blocks').textContent=blocks.length;
+  document.getElementById('st-procs').textContent =procs;
+  document.getElementById('st-fails').textContent =failCount;
+  document.getElementById('badge-procs').textContent=procs+' proc'+(procs!==1?'s':'');
+  document.getElementById('ubar-fill').style.width=util+'%';
+}
+
+function log(msg,type){
+  const list=document.getElementById('log-list');
+  const t=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const el=document.createElement('div');
+  el.className='log-item '+type;
+  el.innerHTML=`<span class="log-msg">${msg}</span><span class="log-t">${t}</span>`;
+  list.prepend(el);
+  while(list.children.length>40) list.removeChild(list.lastChild);
+}
+
+function shake(el){
+  el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake');
+  el.addEventListener('animationend',()=>el.classList.remove('shake'),{once:true});
+}
+
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Enter') return;
+  if(document.activeElement.id==='inp-block') addBlock();
+  if(document.activeElement.id==='inp-proc')  allocate();
+});
+
+switchAlgo('first');
+</script>
+</body>
+</html>

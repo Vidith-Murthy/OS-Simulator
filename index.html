@@ -539,6 +539,22 @@
             color: var(--text-primary);
             margin-bottom: 10px;
             letter-spacing: -0.2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--red-dim);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            white-space: nowrap;
         }
 
         .card-description {
@@ -746,7 +762,7 @@
 
     <!-- NAV -->
     <nav>
-        <a class="logo" href="/index.html">
+        <a class="logo" href="./index.html">
             <span class="logo-animation">OS VISUALIZER</span>
         </a>
         <div class="hamburger">
@@ -755,25 +771,9 @@
             <div></div>
         </div>
         <ul>
-            <li><button onclick="location.href='/index.html';" class="button"><i class="fas fa-home"></i> Home</button></li>
-            <li class="dropdown">
-                <button class="button"><i class="fas fa-code-branch"></i> Algorithms <i class="fas fa-chevron-down" style="font-size:10px;margin-left:4px;opacity:0.5"></i></button>
-                <div class="dropdown-content">
-                    <a href="/c-code_lifecycle/index.html"><i class="fas fa-code"></i> Code Life Cycle</a>
-                    <a href="/process_scheduling/process.html"><i class="fas fa-tasks"></i> Process Scheduling</a>
-                    <a href="/process_sync/home.html"><i class="fas fa-sync"></i> Process Synchronization</a>
-                    <a href="/banker_algorithm/index.html"><i class="fas fa-university"></i> Bankers Algorithm</a>
-                    <a href="/deadlock_detection/deadlock_detection.html"><i class="fas fa-project-diagram"></i> DeadLock Detection (RAG)</a>
-                    <a href="/fittingAlgo/index.html"><i class="fas fa-puzzle-piece"></i> Fit Algorithms</a>
-                    <a href="/page_replacement/page_replacement_home.html"><i class="fas fa-exchange-alt"></i> Page Replacement</a>
-                    <a href="/Disk/disk.html"><i class="fas fa-hdd"></i> Disk Scheduling</a>
-                    <a href="/file_allocation/file.html"><i class="fas fa-folder"></i> File Allocation</a>
-                    <a href="/mft_mvt/MVFT.html"><i class="fas fa-memory"></i> MFT and MVT</a>
-                    <a href="/system_calls/system_calls.html"><i class="fas fa-phone-alt"></i> System Calls</a>
-                </div>
-            </li>
+            
             <li><button class="button" onclick="location.href='./about.html';"><i class="fas fa-info-circle"></i> About</button></li>
-            <li><button class="button" onclick="location.href='./references.html';"><i class="fas fa-book"></i> References</button></li>
+            
         </ul>
     </nav>
 
@@ -800,7 +800,7 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-power-off"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Booting Process</h3>
+                    <h3 class="card-title">Booting Process<span class="tag">Name</span></h3>
                     <p class="card-description">Explore how an OS starts from power-on. Understand BIOS, bootloader, kernel loading, and system initialization.</p>
                     <a href="./booting/index.html" class="card-link">Explore</a>
                 </div>
@@ -811,7 +811,7 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-code"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Life Cycle of Code</h3>
+                    <h3 class="card-title">Life Cycle of Code<span class="tag">Name</span></h3>
                     <p class="card-description">Explore C programming's life cycle — from writing code to compilation and execution, and how the OS manages resources.</p>
                     <a href="./c-code_lifecycle/index.html" class="card-link">Explore</a>
                 </div>
@@ -822,31 +822,31 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-cogs"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Process Life Cycle</h3>
+                    <h3 class="card-title">Process Life Cycle<span class="tag">Name</span></h3>
                     <p class="card-description">Understand how a process transitions through New, Ready, Running, Waiting, and Terminated states.</p>
                     <a href="./process_lifecycle/index.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- Process Scheduling -->
-            <div class="algo-card" onclick="location.href='process_scheduling/process.html'">
+            <div class="algo-card" onclick="location.href='./process_scheduling/process.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-tasks"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Process Scheduling</h3>
+                    <h3 class="card-title">Process Scheduling<span class="tag">Name</span></h3>
                     <p class="card-description">Explore CPU scheduling algorithms like FCFS, SJF, Round Robin, and Priority Scheduling.</p>
-                    <a href="process_scheduling/process.html" class="card-link">Explore</a>
+                    <a href="./process_scheduling/process.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- Process Synchronization -->
-            <div class="algo-card" onclick="location.href='process_sync/home.html'">
+            <div class="algo-card" onclick="location.href='./process_sync/home.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-sync"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Process Synchronization</h3>
+                    <h3 class="card-title">Process Synchronization<span class="tag">Name</span></h3>
                     <p class="card-description">Understand semaphores, monitors, and mutex that coordinate processes to prevent race conditions.</p>
-                    <a href="process_sync/home.html" class="card-link">Explore</a>
+                    <a href="./process_sync/home.html" class="card-link">Explore</a>
                 </div>
             </div>
 
@@ -855,7 +855,7 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-university"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Banker's Algorithm</h3>
+                    <h3 class="card-title">Banker's Algorithm<span class="tag">Vidith</span></h3>
                     <p class="card-description">Visualize the deadlock avoidance algorithm that determines whether resource allocation leads to a safe state.</p>
                     <a href="./banker_algorithm/index.html" class="card-link">Explore</a>
                 </div>
@@ -866,64 +866,64 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-project-diagram"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Deadlock Detection</h3>
+                    <h3 class="card-title">Deadlock Detection<span class="tag">Name</span></h3>
                     <p class="card-description">Visualize deadlock detection using a Resource Allocation Graph (RAG) to identify circular wait conditions.</p>
                     <a href="./deadlock_detection/deadlock_detection.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- Memory Fitting Algorithms -->
-            <div class="algo-card" onclick="location.href='fittingAlgo/index.html'">
+            <div class="algo-card" onclick="location.href='./fittingAlgo/index.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-puzzle-piece"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Memory Fitting Algorithms</h3>
+                    <h3 class="card-title">Memory Fitting Algorithms<span class="tag">Name</span></h3>
                     <p class="card-description">Explore First-Fit, Best-Fit, and Worst-Fit algorithms for allocating memory blocks to processes.</p>
-                    <a href="fittingAlgo/index.html" class="card-link">Explore</a>
+                    <a href="./fittingAlgo/index.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- Page Replacement Algorithms -->
-            <div class="algo-card" onclick="location.href='page_replacement/page_replacement_home.html'">
+            <div class="algo-card" onclick="location.href='./page_replacement/page_replacement_home.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-exchange-alt"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Page Replacement</h3>
+                    <h3 class="card-title">Page Replacement<span class="tag">Name</span></h3>
                     <p class="card-description">Understand FIFO, LRU, and Optimal page replacement strategies used in virtual memory management.</p>
-                    <a href="page_replacement/page_replacement_home.html" class="card-link">Explore</a>
+                    <a href="./page_replacement/page_replacement_home.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- Disk Scheduling -->
-            <div class="algo-card" onclick="location.href='Disk/disk.html'">
+            <div class="algo-card" onclick="location.href='./Disk/disk.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-hdd"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Disk Scheduling</h3>
+                    <h3 class="card-title">Disk Scheduling<span class="tag">Name</span></h3>
                     <p class="card-description">Visualize FCFS, SSTF, SCAN, C-SCAN, LOOK, and C-LOOK algorithms that optimize disk head movement.</p>
-                    <a href="Disk/disk.html" class="card-link">Explore</a>
+                    <a href="./Disk/disk.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- File Allocation -->
-            <div class="algo-card" onclick="location.href='file_allocation/file.html'">
+            <div class="algo-card" onclick="location.href='./file_allocation/file.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-folder"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">File Allocation</h3>
+                    <h3 class="card-title">File Allocation<span class="tag">Name</span></h3>
                     <p class="card-description">Explore contiguous, linked, and indexed file allocation methods used in file systems.</p>
-                    <a href="file_allocation/file.html" class="card-link">Explore</a>
+                    <a href="./file_allocation/file.html" class="card-link">Explore</a>
                 </div>
             </div>
 
             <!-- MFT and MVT -->
-            <div class="algo-card" onclick="location.href='mft_mvt/MVFT.html'">
+            <div class="algo-card" onclick="location.href='./Memfit.html'">
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-memory"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">MFT and MVT</h3>
+                    <h3 class="card-title">MFT and MVT<span class="tag">Tanmay</span></h3>
                     <p class="card-description">Understand Multiprogramming with Fixed Tasks (MFT) and Variable Tasks (MVT) memory allocation schemes.</p>
-                    <a href="mft_mvt/MVFT.html" class="card-link">Explore</a>
+                    <a href="./Memfit.html" class="card-link">Explore</a>
                 </div>
             </div>
 
@@ -932,9 +932,20 @@
                 <div class="glow"></div>
                 <div class="card-icon"><i class="fas fa-bolt"></i></div>
                 <div class="card-content">
-                    <h3 class="card-title">Interrupts</h3>
+                    <h3 class="card-title">Interrupts<span class="tag">Name</span></h3>
                     <p class="card-description">Learn how interrupts handle asynchronous events in an OS — ISR, interrupt handling flow, and prioritization.</p>
                     <a href="./interrupts/index.html" class="card-link">Explore</a>
+                </div>
+            </div>
+
+            <!-- RAID -->
+            <div class="algo-card" onclick="location.href='./raid/raid.html'">
+                <div class="glow"></div>
+                <div class="card-icon"><i class="fas fa-database"></i></div>
+                <div class="card-content">
+                    <h3 class="card-title">RAID<span class="tag">Vidith</span></h3>
+                    <p class="card-description">Explore Redundant Array of Independent Disks (RAID) — data redundancy, fault tolerance, and performance optimization techniques.</p>
+                    <a href="./raid/raid.html" class="card-link">Explore</a>
                 </div>
             </div>
 
@@ -951,11 +962,11 @@
         <div class="footer-content">
             <div class="footer-brand">OS VISUALIZER</div>
             <div class="social-links">
-                <a href="https://github.com/Srishti-K15/OS-project" target="_blank" aria-label="GitHub">
+                <a href="https://github.com/Vidith-Murthy/OS-Simulator" target="_blank" aria-label="GitHub">
                     <i class="fab fa-github"></i>
                 </a>
             </div>
-            <p>© 2025 OS Visualizer. All rights reserved.</p>
+            
         </div>
     </footer>
 
