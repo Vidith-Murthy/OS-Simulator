@@ -11,21 +11,21 @@
   --s1:     #111111;
   --s2:     #161616;
   --s3:     #1c1c1c;
-  --b:      #252525;
-  --b2:     #555555;
-  --text:   #e8e8e8;
-  --sub:    #a0a0a0;
-  --dim:    #505050;
+  --b:      rgba(224, 48, 48, 0.1);
+  --b2:     rgba(224, 48, 48, 0.2);
+  --text:   #ffffff;
+  --sub:    #f0f0f0;
+  --dim:    #d0d0d0;
   --mono:   'Space Mono', monospace;
   --sans:   'Syne', sans-serif;
-  --a:      #60a5fa;
-  --ag:     rgba(96,165,250,0.10);
-  --ab:     rgba(96,165,250,0.25);
+  --a:      #e03030;
+  --ag:     rgba(224, 48, 48, 0.1);
+  --ab:     rgba(224, 48, 48, 0.3);
 }
-body.algo-first { --a:#60a5fa; --ag:rgba(96,165,250,0.10); --ab:rgba(96,165,250,0.28); }
-body.algo-best  { --a:#34d399; --ag:rgba(52,211,153,0.10); --ab:rgba(52,211,153,0.28); }
-body.algo-worst { --a:#f87171; --ag:rgba(248,113,113,0.10); --ab:rgba(248,113,113,0.28); }
-body.algo-next  { --a:#fb923c; --ag:rgba(251,146,60,0.10);  --ab:rgba(251,146,60,0.28);  }
+body.algo-first { --a:#e03030; --ag:rgba(224, 48, 48, 0.1); --ab:rgba(224, 48, 48, 0.3); }
+body.algo-best  { --a:#ff6b6b; --ag:rgba(255, 107, 107, 0.1); --ab:rgba(255, 107, 107, 0.3); }
+body.algo-worst { --a:#c82828; --ag:rgba(200, 40, 40, 0.1); --ab:rgba(200, 40, 40, 0.3); }
+body.algo-next  { --a:#ff5555; --ag:rgba(255, 85, 85, 0.1);  --ab:rgba(255, 85, 85, 0.3);  }
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -82,7 +82,7 @@ header{
 .tab.active .tab-pip{box-shadow:0 0 8px currentColor}
 
 .hdr-right{display:flex;align-items:center;gap:8px;padding:0 20px;border-left:1px solid var(--b);font-family:var(--mono);font-size:10px;color:var(--sub)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:#34d399;box-shadow:0 0 8px #34d399}
+.live-dot{width:6px;height:6px;border-radius:50%;background:#ff6b6b;box-shadow:0 0 8px #ff6b6b}
 
 /* ── BODY LAYOUT ── */
 .app-body{flex:1;display:grid;grid-template-columns:280px 1fr 240px;overflow:hidden;min-height:0}
@@ -137,7 +137,7 @@ header{
 .inp::placeholder{color:var(--dim)}
 .inp:focus{border-color:var(--a);box-shadow:0 0 0 2px var(--ag)}
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
-.inp.shake{animation:shake 0.28s ease;border-color:var(--fail,#f87171)}
+.inp.shake{animation:shake 0.28s ease;border-color:var(--fail,#ff6b6b)}
 
 .btn{
   font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.8px;
@@ -150,11 +150,11 @@ header{
 .btn-alloc{background:var(--ag);color:var(--a);border:1px solid var(--ab)}
 .btn-alloc:hover{background:var(--ab)}
 .btn-reset{width:100%;background:transparent;color:var(--dim);border:1px solid var(--b);padding:7px;margin-top:4px;}
-.btn-reset:hover{color:var(--fail,#f87171);border-color:var(--fail,#f87171)}
+.btn-reset:hover{color:#ff6b6b;border-color:#ff6b6b}
 .sep{height:1px;background:var(--b);margin:14px 0}
 
 /* fail colour used for shake/reset hover */
-:root { --fail: #f87171; }
+:root { --fail: #ff6b6b; }
 
 /* ── CENTER: MEMORY MAP ── */
 .map-pane{background:var(--s1)}
@@ -261,8 +261,8 @@ header{
 .log-list{display:flex;flex-direction:column;gap:5px}
 .log-item{display:flex;align-items:flex-start;gap:8px;padding:7px 9px;background:var(--s1);border:1px solid var(--b);border-radius:4px;animation:fadeUp 0.2s ease both}
 @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.log-item.ok  {border-left:2px solid #34d399}
-.log-item.fail{border-left:2px solid #f87171}
+.log-item.ok  {border-left:2px solid #ff6b6b}
+.log-item.fail{border-left:2px solid #c82828}
 .log-item.info{border-left:2px solid var(--dim)}
 .log-msg{font-family:var(--mono);font-size:10px;color:var(--sub);line-height:1.55;flex:1}
 .log-msg b{color:var(--text);font-weight:500}
@@ -272,10 +272,12 @@ header{
 <body class="algo-first">
 
 <header>
-  <div class="hdr-logo">
-    <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
-    <span class="logo-name">MEMFIT</span>
-  </div>
+  <a href="./index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
+    <div class="hdr-logo">
+      <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+      <span class="logo-name">OS VISUALIZER</span>
+    </div>
+  </a>
   <div class="hdr-tabs">
     <button class="tab active" data-algo="first" onclick="switchAlgo('first')"><span class="tab-pip"></span>First Fit</button>
     <button class="tab" data-algo="best"  onclick="switchAlgo('best')"><span class="tab-pip"></span>Best Fit</button>

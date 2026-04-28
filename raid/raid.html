@@ -21,11 +21,13 @@
     <nav class="navbar" id="navbar">
         <div class="nav-content">
             
-            <div class="nav-title">
-                <span class="nav-icon"><i class="fas fa-hdd"></i></span>
-                <h1>RAID <span class="title-accent">Simulator</span></h1>
-            </div>
-            <div class="nav-badge">OS Visualizer</div>
+            <a href="../index.html" style="text-decoration: none; color: inherit; display: flex; align-items: center; gap: 8px;">
+                <div class="nav-title">
+                    <span class="nav-icon"><i class="fas fa-database"></i></span>
+                    <h1>OS VISUALIZER</h1>
+                </div>
+            </a>
+            <div class="nav-badge">RAID Simulator</div>
         </div>
     </nav>
 
@@ -174,6 +176,36 @@
                     <div class="card-stats">
                         <span class="stat"><span class="sk">min_disks</span><span class="sv">4</span></span>
                         <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Two Disks</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card raid-card-nested" onclick="selectRAID('raid01')">
+                    <div class="raid-card-num">01</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 0+1</h3>
+                        <span class="card-label">Stripe then Mirror</span>
+                    </div>
+                    <p class="card-description">Two RAID 0 stripe sets mirrored together — speed with redundancy</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">4 (Even)</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Mirror Set</span></span>
+                    </div>
+                    <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
+                </div>
+
+                <div class="raid-card raid-card-nested" onclick="selectRAID('raid10')">
+                    <div class="raid-card-num">10</div>
+                    <div class="glow-sweep"></div>
+                    <div class="card-header">
+                        <h3>RAID 1+0</h3>
+                        <span class="card-label">Mirror then Stripe</span>
+                    </div>
+                    <p class="card-description">Mirrored pairs striped together — the gold standard for reliability + speed</p>
+                    <div class="card-stats">
+                        <span class="stat"><span class="sk">min_disks</span><span class="sv">4 (Even)</span></span>
+                        <span class="stat"><span class="sk">redundancy</span><span class="sv sv-full">Per-Pair Mirror</span></span>
                     </div>
                     <div class="card-cta">Explore <i class="fas fa-arrow-right"></i></div>
                 </div>

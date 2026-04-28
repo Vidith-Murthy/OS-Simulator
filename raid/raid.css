@@ -1374,3 +1374,111 @@ body::after {
     .raid-benefits { grid-template-columns: 1fr; }
     .stats-display { grid-template-columns: 1fr; }
 }
+
+/* ── RAID 0+1 / RAID 1+0 nested card styling ── */
+.raid-card-nested {
+    border-color: rgba(224, 48, 48, 0.22);
+    background: linear-gradient(135deg, rgba(22,22,22,0.97) 0%, rgba(30,18,18,0.97) 100%);
+}
+
+/* Keep the ghost watermark number identical to base cards — no badge styling */
+.raid-card-nested .raid-card-num {
+    background: none;
+    border: none;
+    font-size: 4.5rem;
+    letter-spacing: -3px;
+    color: rgba(224, 48, 48, 0.04);
+}
+
+/* Card header: allow wrap so the label doesn't overflow on narrow cards */
+.raid-card-nested .card-header {
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+/* Slightly smaller h3 for compound names (RAID 0+1, RAID 1+0) */
+.raid-card-nested .card-header h3 {
+    font-size: 1.1rem;
+    line-height: 1.2;
+}
+
+/* Label badge: shrink text and allow it to wrap to two lines */
+.raid-card-nested .card-label {
+    font-size: 8px;
+    letter-spacing: 1.5px;
+    line-height: 1.4;
+    text-align: center;
+    max-width: 100px;
+    white-space: normal;
+    background: rgba(224, 48, 48, 0.1);
+    color: #ff8080;
+}
+
+/* ── RAID 0+1 viz cells ── */
+.raid01-set-header {
+    background: rgba(224, 48, 48, 0.13);
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-align: center;
+    padding: 6px 4px;
+    border-bottom: 1px solid rgba(224,48,48,0.25);
+}
+
+.raid01-set-header.raid01-set-b {
+    background: rgba(80, 48, 200, 0.15);
+    color: #a078ff;
+    border-color: rgba(120, 80, 255, 0.25);
+}
+
+.raid01-mirror-header {
+    color: #a078ff !important;
+    border-color: rgba(120, 80, 255, 0.2) !important;
+}
+
+.raid01-mirror-cell {
+    background: rgba(80, 48, 200, 0.12) !important;
+    color: #c0a8ff !important;
+    border-color: rgba(120, 80, 255, 0.3) !important;
+}
+
+.raid01-mirror-cell.active {
+    background: rgba(100, 60, 255, 0.35) !important;
+    border-color: rgba(140, 90, 255, 0.7) !important;
+    color: #e0d4ff !important;
+    box-shadow: 0 0 10px rgba(120,80,255,0.4) !important;
+}
+
+/* ── RAID 1+0 pair headers ── */
+.raid10-pair-header {
+    background: rgba(224, 48, 48, 0.1);
+    color: var(--red);
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-align: center;
+    padding: 5px 2px;
+    border-bottom: 1px solid rgba(224,48,48,0.2);
+}
+
+.raid10-pair-header.raid10-pair-mirror {
+    background: rgba(80, 48, 200, 0.12);
+    color: #a078ff;
+    border-color: rgba(120, 80, 255, 0.22);
+}
+
+/* Mirror packet color — purple, distinct from red parity packets in RAID 5/6 */
+.block-packet.mirror-packet {
+    background: linear-gradient(135deg, #6030d0 0%, #4020a0 100%);
+    border-color: rgba(140, 90, 255, 0.7);
+    color: #e0d4ff;
+}
+
+.block-chip.mirror-chip {
+    background: linear-gradient(135deg, rgba(80,48,180,0.35) 0%, rgba(50,30,140,0.35) 100%);
+    border-color: rgba(120,80,255,0.5);
+    color: #c0a8ff;
+}

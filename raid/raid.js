@@ -171,6 +171,62 @@ const raidConfigs = {
             'Not suitable for very large disk arrays'
         ]
     },
+    raid01: {
+        name: 'RAID 0+1 — Stripe then Mirror',
+        description: 'RAID 0+1 creates two or more RAID 0 stripe sets and then mirrors them. Data is first striped across half the disks (like RAID 0), and the resulting stripe set is mirrored onto the other half. Offers great read/write speed and can tolerate the loss of an entire stripe set, but loses redundancy if multiple disks in the same stripe set fail.',
+        minDisks: 4, maxDisks: 4,
+        method: 'Stripe → Mirror',
+        hasSimulation: true,
+        features: [
+            'First level: RAID 0 striping across half the disks',
+            'Second level: full mirror of the stripe set',
+            'Requires an even number of disks (minimum 4)',
+            'Each stripe set holds the same data',
+            'Tolerate loss of one full stripe set'
+        ],
+        advantages: [
+            'High read and write performance (striping)',
+            'Full redundancy via mirroring the stripe set',
+            'Simple rebuild — replace failed set',
+            'Good for I/O-intensive workloads',
+            'Lower complexity than RAID 10 controller-side'
+        ],
+        disadvantages: [
+            'Only 50% usable capacity',
+            'If two disks in the same stripe set fail, all data is lost',
+            'Less fault-tolerant than RAID 10 for mixed failures',
+            'Expensive — requires twice the disks',
+            'Rebuild copies entire stripe set'
+        ]
+    },
+    raid10: {
+        name: 'RAID 1+0 — Mirror then Stripe',
+        description: 'RAID 1+0 (RAID 10) first mirrors each pair of disks (RAID 1), then stripes data across all mirror pairs (RAID 0). Each pair independently holds a full copy of its data segment. This is the gold standard for databases and high-demand workloads requiring both speed and maximum fault tolerance.',
+        minDisks: 4, maxDisks: 4,
+        method: 'Mirror → Stripe',
+        hasSimulation: true,
+        features: [
+            'First level: RAID 1 mirror for each disk pair',
+            'Second level: RAID 0 stripe across mirror pairs',
+            'Requires an even number of disks (minimum 4)',
+            'One disk per mirror pair can fail safely',
+            'All pairs operate in parallel'
+        ],
+        advantages: [
+            'Excellent read and write performance',
+            'Can survive multiple simultaneous failures (one per pair)',
+            'Fast rebuild — only the failed disk in a pair is rebuilt',
+            'Industry standard for critical databases',
+            'Best overall fault-tolerance of all RAID levels'
+        ],
+        disadvantages: [
+            'Only 50% usable capacity',
+            'More expensive than RAID 5/6',
+            'Requires minimum 4 disks',
+            'No benefit from distributing parity',
+            'Controller must manage multiple mirror sets'
+        ]
+    },
     raid6: {
         name: 'RAID 6 - Dual Parity',
         description: 'Similar to RAID 5 but with two independent parity schemes (P and Q). Can survive two simultaneous disk failures. Data blocks fill first, then P1 and Q1 occupy the last two slots, rotating one position left each stripe row.',
@@ -288,6 +344,264 @@ function buildRaid6Layout(diskCount, dataBlockCount) {
     return stripes;
 }
 
+// ── RAID 0+1 layout ──────────────────────────────────
+// diskCount must be even. Half = stripe set A, half = stripe set B (mirror of A).
+// Returns stripes: each has cells for all disks. Set B mirrors set A.
+function buildRaid01Layout(diskCount, dataBlockCount) {
+    const half = diskCount / 2;
+    const stripes = [];
+    let blockIdx = 1;
+    let stripe = 0;
+
+    while (blockIdx <= dataBlockCount) {
+        const row = [];
+        // Set A: stripe blocks across first half
+        for (let d = 0; d < half; d++) {
+            if (blockIdx <= dataBlockCount) {
+                row.push({ type: 'data', label: `Block ${blockIdx}`, set: 'A', diskInSet: d });
+                blockIdx++;
+            } else {
+                row.push(null);
+            }
+        }
+        // Set B: mirror of set A (same blocks)
+        for (let d = 0; d < half; d++) {
+            const src = row[d];
+            if (src) {
+                row.push({ type: 'mirror', label: src.label, set: 'B', diskInSet: d });
+            } else {
+                row.push(null);
+            }
+        }
+        stripes.push({ row });
+        stripe++;
+        if (blockIdx > dataBlockCount) break;
+    }
+    return stripes;
+}
+
+// ── RAID 1+0 layout ──────────────────────────────────
+// diskCount must be even. Pairs: (0,1), (2,3), etc.
+// Each stripe places one block per pair; the pair's second disk mirrors it.
+function buildRaid10Layout(diskCount, dataBlockCount) {
+    const pairs = diskCount / 2;
+    const stripes = [];
+    let blockIdx = 1;
+    let stripe = 0;
+
+    while (blockIdx <= dataBlockCount) {
+        const row = new Array(diskCount).fill(null);
+        for (let p = 0; p < pairs; p++) {
+            if (blockIdx <= dataBlockCount) {
+                const label = `Block ${blockIdx}`;
+                row[p * 2]     = { type: 'data',   label, pair: p };
+                row[p * 2 + 1] = { type: 'mirror', label, pair: p };
+                blockIdx++;
+            }
+        }
+        stripes.push({ row });
+        stripe++;
+        if (blockIdx > dataBlockCount) break;
+    }
+    return stripes;
+}
+
+// ── RAID 0+1 block viz table ──────────────────────────
+function buildRaid01BlockViz(stripes, diskCount) {
+    const container = document.getElementById('block-visualization');
+    container.innerHTML = '';
+    const half = diskCount / 2;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'raid5-viz-wrapper';
+
+    // Header: Set labels spanning halves
+    const setRow = document.createElement('div');
+    setRow.className = 'raid5-viz-row raid5-header-row';
+    const blank = document.createElement('div');
+    blank.className = 'raid5-viz-cell raid5-stripe-label';
+    blank.textContent = '';
+    setRow.appendChild(blank);
+
+    const setAHeader = document.createElement('div');
+    setAHeader.className = 'raid5-viz-cell raid01-set-header';
+    setAHeader.style.gridColumn = `span ${half}`;
+    setAHeader.textContent = 'Stripe Set A';
+    setRow.appendChild(setAHeader);
+
+    const setBHeader = document.createElement('div');
+    setBHeader.className = 'raid5-viz-cell raid01-set-header raid01-set-b';
+    setBHeader.style.gridColumn = `span ${half}`;
+    setBHeader.textContent = 'Stripe Set B (Mirror)';
+    setRow.appendChild(setBHeader);
+    wrapper.appendChild(setRow);
+
+    // Disk header row
+    const headerRow = document.createElement('div');
+    headerRow.className = 'raid5-viz-row raid5-header-row';
+    const stripeH = document.createElement('div');
+    stripeH.className = 'raid5-viz-cell raid5-stripe-label';
+    stripeH.textContent = 'Stripe';
+    headerRow.appendChild(stripeH);
+    for (let d = 0; d < diskCount; d++) {
+        const dh = document.createElement('div');
+        dh.className = 'raid5-viz-cell raid5-disk-header' + (d >= half ? ' raid01-mirror-header' : '');
+        dh.textContent = `Disk ${d + 1}`;
+        headerRow.appendChild(dh);
+    }
+    wrapper.appendChild(headerRow);
+
+    stripes.forEach((stripe, si) => {
+        const row = document.createElement('div');
+        row.className = 'raid5-viz-row';
+        const sl = document.createElement('div');
+        sl.className = 'raid5-viz-cell raid5-stripe-label';
+        sl.textContent = `Stripe ${si + 1}`;
+        row.appendChild(sl);
+        stripe.row.forEach((cell, di) => {
+            const c = document.createElement('div');
+            c.id = `viz-s${si}-d${di}`;
+            const isMirror = cell && cell.type === 'mirror';
+            c.className = 'raid5-viz-cell raid5-data-cell' + (isMirror ? ' raid01-mirror-cell' : '');
+            c.textContent = cell ? cell.label : '—';
+            row.appendChild(c);
+        });
+        wrapper.appendChild(row);
+    });
+
+    container.appendChild(wrapper);
+}
+
+// ── RAID 1+0 block viz table ──────────────────────────
+function buildRaid10BlockViz(stripes, diskCount) {
+    const container = document.getElementById('block-visualization');
+    container.innerHTML = '';
+    const pairs = diskCount / 2;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'raid5-viz-wrapper';
+
+    // Pair label header
+    const pairRow = document.createElement('div');
+    pairRow.className = 'raid5-viz-row raid5-header-row';
+    const blank = document.createElement('div');
+    blank.className = 'raid5-viz-cell raid5-stripe-label';
+    blank.textContent = '';
+    pairRow.appendChild(blank);
+    for (let p = 0; p < pairs; p++) {
+        for (let side = 0; side < 2; side++) {
+            const ph = document.createElement('div');
+            ph.className = 'raid5-viz-cell raid10-pair-header' + (side === 1 ? ' raid10-pair-mirror' : '');
+            ph.textContent = side === 0 ? `Pair ${p + 1} (Primary)` : `Pair ${p + 1} (Mirror)`;
+            pairRow.appendChild(ph);
+        }
+    }
+    wrapper.appendChild(pairRow);
+
+    // Disk header
+    const headerRow = document.createElement('div');
+    headerRow.className = 'raid5-viz-row raid5-header-row';
+    const stripeH = document.createElement('div');
+    stripeH.className = 'raid5-viz-cell raid5-stripe-label';
+    stripeH.textContent = 'Stripe';
+    headerRow.appendChild(stripeH);
+    for (let d = 0; d < diskCount; d++) {
+        const dh = document.createElement('div');
+        dh.className = 'raid5-viz-cell raid5-disk-header' + (d % 2 === 1 ? ' raid01-mirror-header' : '');
+        dh.textContent = `Disk ${d + 1}`;
+        headerRow.appendChild(dh);
+    }
+    wrapper.appendChild(headerRow);
+
+    stripes.forEach((stripe, si) => {
+        const row = document.createElement('div');
+        row.className = 'raid5-viz-row';
+        const sl = document.createElement('div');
+        sl.className = 'raid5-viz-cell raid5-stripe-label';
+        sl.textContent = `Stripe ${si + 1}`;
+        row.appendChild(sl);
+        stripe.row.forEach((cell, di) => {
+            const c = document.createElement('div');
+            c.id = `viz-s${si}-d${di}`;
+            const isMirror = cell && cell.type === 'mirror';
+            c.className = 'raid5-viz-cell raid5-data-cell' + (isMirror ? ' raid01-mirror-cell' : '');
+            c.textContent = cell ? cell.label : '—';
+            row.appendChild(c);
+        });
+        wrapper.appendChild(row);
+    });
+
+    container.appendChild(wrapper);
+}
+
+// ── RAID 0+1 animation ────────────────────────────────
+function startRaid01Animation(diskCount, dataBlockCount, animationArea) {
+    const stripes = buildRaid01Layout(diskCount, dataBlockCount);
+    buildRaid01BlockViz(stripes, diskCount);
+
+    let delay = 0;
+    const STRIPE_GAP  = 700;
+    const CELL_OFFSET = 160;
+
+    stripes.forEach((stripe, si) => {
+        const half = diskCount / 2;
+        // Animate Set A first, then Set B with a slight extra gap
+        stripe.row.forEach((cell, di) => {
+            if (!cell) return;
+            const isMirrorCell = cell.type === 'mirror';
+            const t = delay + (isMirrorCell ? half * CELL_OFFSET + 200 : 0) + (di % half) * CELL_OFFSET;
+            setTimeout(() => {
+                if (!simulationRunning) return;
+                animatePacketToDisk(cell.label, cell.label, di, animationArea, false, si, false, isMirrorCell);
+                const vizCell = document.getElementById(`viz-s${si}-d${di}`);
+                if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+            }, t);
+        });
+        delay += STRIPE_GAP + diskCount * CELL_OFFSET;
+    });
+}
+
+// ── RAID 1+0 animation ────────────────────────────────
+function startRaid10Animation(diskCount, dataBlockCount, animationArea) {
+    const stripes = buildRaid10Layout(diskCount, dataBlockCount);
+    buildRaid10BlockViz(stripes, diskCount);
+
+    let delay = 0;
+    const STRIPE_GAP  = 700;
+    const PAIR_OFFSET = 200;   // between primary and its mirror
+    const DISK_OFFSET = 140;   // between pairs
+
+    stripes.forEach((stripe, si) => {
+        const pairs = diskCount / 2;
+        for (let p = 0; p < pairs; p++) {
+            const primaryDisk = p * 2;
+            const mirrorDisk  = p * 2 + 1;
+            const primary = stripe.row[primaryDisk];
+            const mirror  = stripe.row[mirrorDisk];
+
+            if (primary) {
+                const t = delay + p * DISK_OFFSET;
+                setTimeout(() => {
+                    if (!simulationRunning) return;
+                    animatePacketToDisk(primary.label, primary.label, primaryDisk, animationArea, false, si, false, false);
+                    const vizCell = document.getElementById(`viz-s${si}-d${primaryDisk}`);
+                    if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+                }, t);
+            }
+            if (mirror) {
+                const t = delay + p * DISK_OFFSET + PAIR_OFFSET;
+                setTimeout(() => {
+                    if (!simulationRunning) return;
+                    animatePacketToDisk(mirror.label, mirror.label, mirrorDisk, animationArea, false, si, false, true);
+                    const vizCell = document.getElementById(`viz-s${si}-d${mirrorDisk}`);
+                    if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+                }, t);
+            }
+        }
+        delay += STRIPE_GAP + diskCount * DISK_OFFSET;
+    });
+}
+
 // ── Select RAID Level ────────────────────────────────
 function selectRAID(raidLevel) {
     currentRAID = raidLevel;
@@ -345,6 +659,15 @@ function onDiskCountChange() {
         if (parseInt(blockInput.value) > maxBlocks) blockInput.value = maxBlocks;
         if (parseInt(blockInput.value) < blockInput.min) blockInput.value = blockInput.min;
         if (hint) hint.textContent = `Min: ${blockInput.min} | Max: ${maxBlocks} data blocks`;
+    } else if (currentRAID === 'raid01' || currentRAID === 'raid10') {
+        // Fixed 4 disks; blocks up to (diskCount/2)*5
+        const half = diskCount / 2;
+        const maxBlocks = half * 5;
+        blockInput.min = 2;
+        blockInput.max = maxBlocks;
+        if (parseInt(blockInput.value) > maxBlocks) blockInput.value = maxBlocks;
+        if (parseInt(blockInput.value) < 2) blockInput.value = 2;
+        if (hint) hint.textContent = `Min: 2 | Max: ${maxBlocks} (${half} stripe disks × 5)`;
     } else {
         const maxBlocks = diskCount * 5;
         blockInput.min = 1;
@@ -374,6 +697,12 @@ function initializeSimulation() {
     } else if (currentRAID === 'raid6') {
         if (blockCount < 2 || blockCount > 10) {
             alert('RAID 6 requires between 2 and 10 data blocks.'); return;
+        }
+    } else if (currentRAID === 'raid01' || currentRAID === 'raid10') {
+        const half = diskCount / 2;
+        const maxBlocks = half * 5;
+        if (blockCount < 2 || blockCount > maxBlocks) {
+            alert(`${config.name} requires between 2 and ${maxBlocks} data blocks.`); return;
         }
     } else {
         const maxBlocks = diskCount * 5;
@@ -494,6 +823,10 @@ function startAnimation(diskCount, blockCount) {
         startRaid5Animation(diskCount, blockCount, animationArea);
     } else if (currentRAID === 'raid6') {
         startRaid6Animation(diskCount, blockCount, animationArea);
+    } else if (currentRAID === 'raid01') {
+        startRaid01Animation(diskCount, blockCount, animationArea);
+    } else if (currentRAID === 'raid10') {
+        startRaid10Animation(diskCount, blockCount, animationArea);
     } else {
         startStandardAnimation(diskCount, animationArea);
     }
@@ -615,7 +948,7 @@ function startRaid6Animation(diskCount, dataBlockCount, animationArea) {
 }
 
 // ── Animate a single packet to a disk ────────────────
-function animatePacketToDisk(blockId, label, diskIdx, animationArea, isParity = false, stripeIdx = 0, isQ = false) {
+function animatePacketToDisk(blockId, label, diskIdx, animationArea, isParity = false, stripeIdx = 0, isQ = false, isMirror = false) {
     const targetDiskWrapper = document.getElementById(`disk-${diskIdx}`);
     if (!targetDiskWrapper) return;
 
@@ -628,7 +961,10 @@ function animatePacketToDisk(blockId, label, diskIdx, animationArea, isParity = 
     const endY   = (diskRect.top - animRect.top) + 45;
 
     const packet = document.createElement('div');
-    packet.className = 'block-packet' + (isParity ? (isQ ? ' q-parity-packet' : ' parity-packet') : '');
+    let packetClass = 'block-packet';
+    if (isMirror)       packetClass += ' mirror-packet';
+    else if (isParity)  packetClass += isQ ? ' q-parity-packet' : ' parity-packet';
+    packet.className = packetClass;
     packet.textContent = label;
     packet.style.left = startX + 'px';
     packet.style.top  = startY + 'px';
@@ -658,7 +994,7 @@ function animatePacketToDisk(blockId, label, diskIdx, animationArea, isParity = 
                 svgEl.classList.add('disk-flash');
                 setTimeout(() => svgEl.classList.remove('disk-flash'), 400);
             }
-            addChipToDisk(diskIdx, label, isParity, isQ);
+            addChipToDisk(diskIdx, label, isParity, isQ, isMirror);
         }
     }
 
@@ -666,13 +1002,16 @@ function animatePacketToDisk(blockId, label, diskIdx, animationArea, isParity = 
 }
 
 // ── Add landing chip inside cylinder ─────────────────
-function addChipToDisk(diskIdx, label, isParity, isQ = false) {
+function addChipToDisk(diskIdx, label, isParity, isQ = false, isMirror = false) {
     const stack = document.getElementById(`disk-blocks-${diskIdx}`);
     if (!stack) return;
 
     const chipCount = parseInt(stack.dataset.chipCount || '0');
     const chip = document.createElement('div');
-    chip.className = 'block-chip' + (isParity ? (isQ ? ' q-parity-chip' : ' parity-chip') : '');
+    let chipClass = 'block-chip';
+    if (isMirror)       chipClass += ' mirror-chip';
+    else if (isParity)  chipClass += isQ ? ' q-parity-chip' : ' parity-chip';
+    chip.className = chipClass;
     chip.textContent = label;
     chip.style.setProperty('--chip-index', String(chipCount));
     stack.appendChild(chip);
@@ -899,6 +1238,16 @@ function updateStats(diskCount, blockCount) {
         const stripes = buildRaid6Layout(diskCount, blockCount);
         const totalCells = stripes.reduce((acc, s) => acc + s.row.filter(Boolean).length, 0);
         blocksPerDisk = Math.ceil(totalCells / diskCount);
+    } else if (currentRAID === 'raid01') {
+        usableCapacity = blockCount;
+        redundancy = 'Yes (Mirrored Stripe Sets)';
+        const stripes = buildRaid01Layout(diskCount, blockCount);
+        blocksPerDisk = Math.ceil(stripes.length * (diskCount / 2) / diskCount) * 2;
+        blocksPerDisk = Math.ceil(blockCount / (diskCount / 2));
+    } else if (currentRAID === 'raid10') {
+        usableCapacity = blockCount;
+        redundancy = 'Yes (Per-Pair Mirroring)';
+        blocksPerDisk = Math.ceil(blockCount / (diskCount / 2));
     }
 
     if (!statsContainer) return;
