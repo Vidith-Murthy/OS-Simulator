@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>File Allocation Simulator — OS Visualizer</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void: #0a0a0a;
+      --bg-deep: #111111;
+      --bg-surface: #161616;
+      --bg-card: rgba(22, 22, 22, 0.92);
+      --red: #e03030;
+      --red-dim: rgba(224, 48, 48, 0.45);
+      --red-faint: rgba(224, 48, 48, 0.08);
+      --text-primary: #e8e8e8;
+      --text-secondary: #c06060;
+      --text-muted: #5a2020;
+      --border-subtle: rgba(224, 48, 48, 0.1);
+      --border-hover: rgba(224, 48, 48, 0.4);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-display: 'Syne', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+
+      /* Block colors per file */
+      --c0: #e03030; --c1: #e08030; --c2: #d0c020;
+      --c3: #30a030; --c4: #2090e0; --c5: #8030d0;
+      --c6: #d03090; --c7: #20c0c0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      background-color: var(--bg-void);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      line-height: 1.6; min-height: 100vh;
+    }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg-deep); }
+    ::-webkit-scrollbar-thumb { background: var(--red); border-radius: 2px; }
+
+    #particles-js {
+      position: fixed; width: 100%; height: 100%;
+      top: 0; left: 0; z-index: 0;
+    }
+    body::before {
+      content: ''; position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 1; opacity: 0.6;
+    }
+
+    /* Loader */
+    .loader-wrapper {
+      position: fixed; inset: 0; background: var(--bg-void);
+      display: flex; flex-direction: column;
+      justify-content: center; align-items: center;
+      z-index: 9999; transition: opacity 0.8s ease, visibility 0.8s ease; gap: 20px;
+    }
+    .loader-text {
+      font-family: var(--font-mono); font-size: 11px; color: var(--red);
+      letter-spacing: 4px; text-transform: uppercase; animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .loader { width: 48px; height: 48px; position: relative; }
+    .loader::before, .loader::after { content: ''; position: absolute; border-radius: 50%; }
+    .loader::before {
+      inset: 0; border: 1px solid transparent;
+      border-top-color: var(--red); animation: spin 1s linear infinite;
+    }
+    .loader::after {
+      inset: 10px; border: 1px solid transparent;
+      border-bottom-color: var(--text-muted);
+      animation: spin 0.7s linear infinite reverse;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Nav */
+    nav {
+      position: fixed; top: 0; width: 100%; z-index: 1000;
+      padding: 16px 5%; display: flex; justify-content: space-between;
+      align-items: center; transition: var(--transition);
+      border-bottom: 1px solid transparent;
+    }
+    nav.scrolled {
+      background: rgba(10,10,10,0.9); backdrop-filter: blur(20px);
+      border-bottom-color: var(--border-subtle); padding: 10px 5%;
+    }
+    .logo {
+      color: var(--text-primary); font-family: var(--font-mono);
+      font-size: 18px; font-weight: 700; text-decoration: none;
+      letter-spacing: 3px; display: flex; align-items: center; gap: 10px;
+    }
+    .logo::before {
+      content: "\f233"; font-family: "Font Awesome 5 Free"; font-weight: 900;
+      color: var(--text-primary); font-size: 18px;
+    }
+    .logo:hover { text-decoration: none; }
+    nav ul { list-style: none; display: flex; margin: 0; gap: 8px; }
+    .btn-nav {
+      background: transparent; color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      padding: 9px 18px; font-size: 13px;
+      font-family: var(--font-display); font-weight: 600;
+      letter-spacing: 0.5px; cursor: pointer;
+      border-radius: 6px; transition: var(--transition);
+      white-space: nowrap;
+    }
+    .btn-nav i { margin-right: 6px; }
+    .btn-nav:hover { color: var(--red); border-color: var(--red-dim); background: var(--red-faint); }
+
+    /* Page layout */
+    .page-wrapper {
+      max-width: 1400px; margin: 0 auto;
+      padding: 100px 24px 60px;
+      position: relative; z-index: 2;
+    }
+
+    /* Page header */
+    .page-header {
+      margin-bottom: 32px;
+    }
+    .breadcrumb-trail {
+      font-family: var(--font-mono); font-size: 11px;
+      color: var(--text-muted); letter-spacing: 2px;
+      margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+    }
+    .breadcrumb-trail a { color: var(--text-secondary); text-decoration: none; }
+    .breadcrumb-trail a:hover { color: var(--red); }
+    .breadcrumb-trail span { color: var(--text-muted); }
+    .page-title {
+      font-family: var(--font-display); font-weight: 800;
+      font-size: clamp(1.6rem, 3vw, 2.4rem);
+      letter-spacing: -0.5px; margin-bottom: 8px;
+    }
+    .page-title .highlight { color: var(--red); }
+    .page-subtitle { font-size: 0.9rem; color: var(--text-secondary); }
+
+    /* Tab method switcher */
+    .method-tabs {
+      display: flex; gap: 8px; margin-bottom: 32px; flex-wrap: wrap;
+    }
+    .method-tab {
+      padding: 10px 22px; border-radius: 8px;
+      border: 1px solid var(--border-subtle);
+      background: transparent; color: var(--text-secondary);
+      font-family: var(--font-display); font-weight: 600;
+      font-size: 13px; cursor: pointer;
+      transition: var(--transition); white-space: nowrap;
+    }
+    .method-tab.active, .method-tab:hover {
+      background: var(--red-faint); color: var(--red);
+      border-color: var(--red-dim);
+    }
+    .method-tab.active { border-color: var(--red); }
+
+    /* Main grid */
+    .sim-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 20px; align-items: start;
+    }
+
+    /* Panel */
+    .panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 14px; padding: 24px;
+      backdrop-filter: blur(10px);
+    }
+    .panel-title {
+      font-family: var(--font-mono); font-size: 11px;
+      letter-spacing: 3px; color: var(--text-muted);
+      text-transform: uppercase; margin-bottom: 20px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .panel-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: var(--border-subtle);
+    }
+
+    /* Form inputs */
+    .form-group { margin-bottom: 18px; }
+    .form-group label {
+      font-size: 12px; color: var(--text-secondary);
+      font-family: var(--font-mono); letter-spacing: 1px;
+      text-transform: uppercase; margin-bottom: 8px;
+      display: block;
+    }
+    .form-control-dark {
+      width: 100%; background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 10px 14px;
+      color: var(--text-primary); font-family: var(--font-mono);
+      font-size: 13px; transition: var(--transition);
+      outline: none;
+    }
+    .form-control-dark:focus { border-color: var(--red-dim); background: #1a1a1a; }
+    .form-control-dark option { background: #161616; }
+
+    /* Color preview dot */
+    .file-color-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .color-dot {
+      width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+    }
+
+    /* Action button */
+    .btn-action {
+      width: 100%; padding: 12px;
+      background: var(--red-faint);
+      border: 1px solid var(--red-dim);
+      border-radius: 8px; color: var(--red);
+      font-family: var(--font-display); font-weight: 700;
+      font-size: 14px; letter-spacing: 0.5px;
+      cursor: pointer; transition: var(--transition);
+      margin-bottom: 10px;
+    }
+    .btn-action:hover { background: rgba(224,48,48,0.18); transform: translateY(-1px); }
+    .btn-action:active { transform: scale(0.98); }
+    .btn-secondary {
+      background: transparent; border-color: var(--border-subtle);
+      color: var(--text-secondary);
+    }
+    .btn-secondary:hover { border-color: var(--border-hover); color: var(--text-primary); background: var(--red-faint); }
+
+    /* File list in panel */
+    .file-list { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px; font-family: var(--font-mono);
+      transition: var(--transition);
+    }
+    .file-item:hover { border-color: var(--border-hover); }
+    .file-item .file-name { flex: 1; color: var(--text-primary); }
+    .file-item .file-blocks { color: var(--text-secondary); font-size: 11px; }
+    .file-item .file-delete {
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; padding: 2px 6px; border-radius: 4px;
+      transition: var(--transition); font-size: 12px;
+    }
+    .file-item .file-delete:hover { color: var(--red); background: var(--red-faint); }
+
+    /* Visualization panel */
+    .viz-panel { display: flex; flex-direction: column; gap: 16px; }
+
+    /* Disk grid */
+    .disk-section { }
+    .disk-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 12px;
+    }
+    .disk-stats {
+      display: flex; gap: 16px;
+    }
+    .stat {
+      font-family: var(--font-mono); font-size: 11px;
+    }
+    .stat-label { color: var(--text-muted); letter-spacing: 1px; }
+    .stat-value { color: var(--text-secondary); font-weight: 700; }
+    .stat-value.red { color: var(--red); }
+
+    .disk-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 16), 1fr);
+      gap: 4px;
+    }
+    .disk-block {
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface);
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-mono); font-size: 9px;
+      color: transparent;
+      transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+      position: relative; cursor: default;
+      overflow: hidden;
+    }
+    .disk-block.allocated {
+      color: rgba(0,0,0,0.5);
+      border-color: transparent;
+    }
+    .disk-block.index-block {
+      border: 2px solid rgba(255,255,255,0.4) !important;
+    }
+    .disk-block .block-num {
+      position: absolute; bottom: 2px; right: 3px;
+      font-size: 8px; opacity: 0.6;
+    }
+    .disk-block .block-arrow {
+      position: absolute; font-size: 10px; opacity: 0.7;
+    }
+    .disk-block:hover .tooltip-block {
+      display: block;
+    }
+    .tooltip-block {
+      display: none; position: absolute;
+      bottom: calc(100% + 6px); left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10,10,10,0.95);
+      border: 1px solid var(--border-hover);
+      border-radius: 6px; padding: 6px 10px;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--text-primary); white-space: nowrap;
+      z-index: 10; pointer-events: none;
+    }
+
+    /* Table section */
+    .table-section { }
+    .data-table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--font-mono); font-size: 12px;
+    }
+    .data-table th {
+      padding: 10px 14px; text-align: left;
+      color: var(--text-muted); font-size: 10px;
+      letter-spacing: 2px; text-transform: uppercase;
+      border-bottom: 1px solid var(--border-subtle);
+      font-weight: 400;
+    }
+    .data-table td {
+      padding: 10px 14px; border-bottom: 1px solid rgba(224,48,48,0.05);
+      color: var(--text-secondary); vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--red-faint); color: var(--text-primary); }
+    .block-chain {
+      display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+    }
+    .chain-block {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 5px;
+      font-size: 10px; font-weight: 700; color: rgba(0,0,0,0.6);
+      border: 1px solid transparent; flex-shrink: 0;
+    }
+    .chain-arrow { color: var(--text-muted); font-size: 10px; }
+
+    /* Info card */
+    .info-banner {
+      background: var(--red-faint);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px; padding: 16px 20px;
+      font-size: 0.82rem; color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    .info-banner strong { color: var(--red); }
+
+    /* Legend */
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+    .legend-item {
+      display: flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 10px;
+      color: var(--text-secondary);
+    }
+    .legend-swatch {
+      width: 14px; height: 14px; border-radius: 3px;
+    }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      color: var(--text-muted); font-family: var(--font-mono);
+      font-size: 13px; letter-spacing: 1px;
+    }
+    .empty-state i { font-size: 2rem; margin-bottom: 12px; display: block; color: var(--text-muted); }
+
+    /* Toast */
+    .toast-msg {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: rgba(14,14,14,0.96);
+      border: 1px solid var(--red-dim);
+      border-radius: 8px; padding: 12px 24px;
+      font-family: var(--font-mono); font-size: 12px;
+      color: var(--text-primary); z-index: 9998;
+      transition: transform 0.3s ease; pointer-events: none;
+    }
+    .toast-msg.show { transform: translateX(-50%) translateY(0); }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-subtle);
+      text-align: center; padding: 32px 0; margin-top: 60px;
+      position: relative; z-index: 2;
+    }
+    .footer-brand {
+      font-family: var(--font-mono); font-size: 12px;
+      letter-spacing: 3px; color: var(--text-secondary);
+    }
+
+    @media (max-width: 900px) {
+      .sim-grid { grid-template-columns: 1fr; }
+      .disk-grid { --cols: 10 !important; }
+    }
+    @media (max-width: 600px) {
+      .method-tabs { flex-direction: column; }
+      .disk-grid { --cols: 8 !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Loader -->
+  <div class="loader-wrapper">
+    <div class="loader"></div>
+    <div class="loader-text">SIMULATING_</div>
+  </div>
+
+  <!-- Particles -->
+  <div id="particles-js"></div>
+
+  <!-- Nav -->
+  <nav id="mainNav">
+    <a class="logo" href="../index.html"><span>OS VISUALIZER</span></a>
+    <ul>
+      <li><button class="btn-nav" onclick="location.href='./file.html'"><i class="fas fa-arrow-left"></i> File Allocation</button></li>
+      <li><button class="btn-nav" onclick="location.href='../index.html'"><i class="fas fa-home"></i> Home</button></li>
+    </ul>
+  </nav>
+
+  <div class="page-wrapper">
+    <!-- Header -->
+    <div class="page-header">
+      <div class="breadcrumb-trail">
+        <a href="../index.html">HOME</a>
+        <span>/</span>
+        <a href="./file.html">FILE ALLOCATION</a>
+        <span>/</span>
+        <span id="methodBreadcrumb">SIMULATOR</span>
+      </div>
+      <div class="page-title">File Allocation <span class="highlight" id="methodTitleHighlight">Simulator</span></div>
+      <div class="page-subtitle" id="methodSubtitle">Select a method and add files to visualize disk allocation.</div>
+    </div>
+
+    <!-- Method Tabs -->
+    <div class="method-tabs">
+      <button class="method-tab" data-method="contiguous" onclick="switchMethod('contiguous')">
+        <i class="fas fa-grip-horizontal" style="margin-right:6px"></i>Contiguous
+      </button>
+      <button class="method-tab" data-method="linked" onclick="switchMethod('linked')">
+        <i class="fas fa-link" style="margin-right:6px"></i>Linked
+      </button>
+      <button class="method-tab" data-method="indexed" onclick="switchMethod('indexed')">
+        <i class="fas fa-list-ol" style="margin-right:6px"></i>Indexed
+      </button>
+    </div>
+
+    <!-- Simulator Grid -->
+    <div class="sim-grid">
+
+      <!-- Left: Controls -->
+      <div>
+        <!-- Info Banner -->
+        <div class="info-banner" id="infoBanner" style="margin-bottom:16px"></div>
+
+        <!-- Add File Panel -->
+        <div class="panel">
+          <div class="panel-title">Add File</div>
+
+          <div class="form-group">
+            <label>File Name</label>
+            <input type="text" id="fileName" class="form-control-dark" placeholder="e.g. document.txt" maxlength="20">
+          </div>
+          <div class="form-group">
+            <label>File Size (blocks)</label>
+            <input type="number" id="fileSize" class="form-control-dark" placeholder="e.g. 4" min="1" max="10" value="3">
+          </div>
+          <div class="form-group" id="startBlockGroup">
+            <label>Preferred Start Block <span style="color:var(--text-muted);font-size:10px">(contiguous)</span></label>
+            <input type="number" id="startBlock" class="form-control-dark" placeholder="Auto" min="0" max="63">
+          </div>
+
+          <button class="btn-action" onclick="addFile()"><i class="fas fa-plus" style="margin-right:8px"></i>Add File</button>
+          <button class="btn-action btn-secondary" onclick="resetAll()"><i class="fas fa-redo" style="margin-right:8px"></i>Reset All</button>
+
+          <!-- File list -->
+          <div id="fileListContainer" style="display:none">
+            <div class="panel-title" style="margin-top:20px">Files</div>
+            <div class="file-list" id="fileList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Visualization -->
+      <div class="viz-panel">
+
+        <!-- Disk visualization -->
+        <div class="panel disk-section">
+          <div class="disk-header">
+            <div class="panel-title" style="margin-bottom:0">Disk Blocks (64 total)</div>
+            <div class="disk-stats">
+              <div class="stat">
+                <div class="stat-label">FREE</div>
+                <div class="stat-value" id="statFree">64</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">USED</div>
+                <div class="stat-value red" id="statUsed">0</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Legend -->
+          <div class="legend" id="legend" style="margin-bottom:14px; margin-top:8px"></div>
+
+          <!-- Disk grid -->
+          <div class="disk-grid" id="diskGrid" style="--cols:16"></div>
+        </div>
+
+        <!-- Table -->
+        <div class="panel table-section" id="tablePanel">
+          <div class="panel-title">Allocation Table</div>
+          <div id="tableContainer">
+            <div class="empty-state">
+              <i class="fas fa-folder-open"></i>
+              No files allocated yet. Add a file to begin.
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-msg" id="toast"></div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-brand">OS VISUALIZER — FILE ALLOCATION SIMULATOR</div>
+  </footer>
+
+  <script>
+    // ─── State ───────────────────────────────────────────────────────────────
+    const TOTAL_BLOCKS = 64;
+    const COLS = 16;
+    const FILE_COLORS = ['#e03030','#e08030','#d0c020','#30a030','#2090e0','#8030d0','#d03090','#20c0c0'];
+    const FILE_COLORS_DIM = ['rgba(224,48,48,0.3)','rgba(224,128,48,0.3)','rgba(208,192,32,0.3)','rgba(48,160,48,0.3)','rgba(32,144,224,0.3)','rgba(128,48,208,0.3)','rgba(208,48,144,0.3)','rgba(32,192,192,0.3)'];
+
+    let currentMethod = 'contiguous';
+    let files = [];            // { name, size, color, blocks: [], indexBlock: null }
+    let diskBlocks = new Array(TOTAL_BLOCKS).fill(null); // null = free, else fileIndex
+
+    const methodInfo = {
+      contiguous: {
+        label: 'CONTIGUOUS',
+        subtitle: 'Each file occupies consecutive disk blocks. Fast access, but prone to external fragmentation.',
+        banner: '<strong>Contiguous Allocation:</strong> Each file is stored in adjacent (contiguous) blocks. The directory stores only the <em>start block</em> and <em>length</em>. Great sequential speed, but free-space management and file growth are challenging.'
+      },
+      linked: {
+        label: 'LINKED',
+        subtitle: 'Each block holds a pointer to the next block. No fragmentation, but slow random access.',
+        banner: '<strong>Linked Allocation:</strong> Blocks are chained — each block stores the address of the <em>next block</em>. The directory only stores the <em>start</em> and <em>end</em> pointers. No external fragmentation, but random access requires traversal.'
+      },
+      indexed: {
+        label: 'INDEXED',
+        subtitle: 'A dedicated index block stores all block addresses. Best of both contiguous and linked.',
+        banner: '<strong>Indexed Allocation:</strong> A special <em>index block</em> (shown with white border) holds all pointers to the file\'s data blocks. Supports efficient random access and no external fragmentation, at the cost of one extra block per file.'
+      }
+    };
+
+    // ─── Init ─────────────────────────────────────────────────────────────────
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const lw = document.querySelector('.loader-wrapper');
+        lw.style.opacity = '0'; lw.style.visibility = 'hidden';
+      }, 900);
+
+      window.addEventListener('scroll', () => {
+        document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 40);
+      });
+
+      const params = new URLSearchParams(window.location.search);
+      const m = params.get('method');
+      if (m && methodInfo[m]) switchMethod(m);
+      else switchMethod('contiguous');
+
+      renderDisk();
+
+      window.particlesJS("particles-js", {
+        "particles": {
+          "number": { "value": 20, "density": { "enable": true, "value_area": 1400 } },
+          "color": { "value": "#e03030" },
+          "shape": { "type": "circle" },
+          "opacity": { "value": 0.1, "random": true },
+          "size": { "value": 1.5, "random": true },
+          "line_linked": { "enable": true, "distance": 180, "color": "#e03030", "opacity": 0.05, "width": 1 },
+          "move": { "enable": true, "speed": 0.3, "random": true, "out_mode": "out" }
+        },
+        "interactivity": {
+          "detect_on": "canvas",
+          "events": { "onhover": { "enable": false }, "onclick": { "enable": false } }
+        },
+        "retina_detect": true
+      });
+    });
+
+    // ─── Method Switch ────────────────────────────────────────────────────────
+    function switchMethod(method) {
+      currentMethod = method;
+      resetAll(true);
+
+      document.querySelectorAll('.method-tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.method === method);
+      });
+
+      const info = methodInfo[method];
+      document.getElementById('methodBreadcrumb').textContent = info.label;
+      document.getElementById('methodTitleHighlight').textContent = info.label.charAt(0) + info.label.slice(1).toLowerCase();
+      document.getElementById('methodSubtitle').textContent = info.subtitle;
+      document.getElementById('infoBanner').innerHTML = info.banner;
+      document.getElementById('startBlockGroup').style.display = method === 'contiguous' ? '' : 'none';
+
+      // Update URL without reload
+      const url = new URL(window.location);
+      url.searchParams.set('method', method);
+      window.history.replaceState({}, '', url);
+    }
+
+    // ─── Disk Render ──────────────────────────────────────────────────────────
+    function renderDisk() {
+      const grid = document.getElementById('diskGrid');
+      grid.innerHTML = '';
+      let used = 0;
+
+      for (let i = 0; i < TOTAL_BLOCKS; i++) {
+        const div = document.createElement('div');
+        div.className = 'disk-block';
+        div.id = `block-${i}`;
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'block-num';
+        numSpan.textContent = i;
+        div.appendChild(numSpan);
+
+        const fi = diskBlocks[i];
+        if (fi !== null) {
+          used++;
+          const f = files[fi];
+          div.classList.add('allocated');
+          div.style.backgroundColor = f.color;
+          div.style.borderColor = 'transparent';
+
+          // Index block highlight
+          if (currentMethod === 'indexed' && f.indexBlock === i) {
+            div.classList.add('index-block');
+            div.title = `Index block for "${f.name}"`;
+          }
+
+          // Tooltip
+          const tip = document.createElement('div');
+          tip.className = 'tooltip-block';
+          tip.textContent = currentMethod === 'indexed' && f.indexBlock === i
+            ? `[IDX] ${f.name}`
+            : f.name + ` #${f.blocks.indexOf(i) >= 0 ? f.blocks.indexOf(i) : '?'}`;
+          div.appendChild(tip);
+        }
+
+        grid.appendChild(div);
+      }
+
+      document.getElementById('statFree').textContent = TOTAL_BLOCKS - used;
+      document.getElementById('statUsed').textContent = used;
+
+      renderLegend();
+      renderTable();
+    }
+
+    function renderLegend() {
+      const leg = document.getElementById('legend');
+      leg.innerHTML = '';
+      files.forEach(f => {
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        item.innerHTML = `<div class="legend-swatch" style="background:${f.color}"></div><span>${f.name}</span>`;
+        leg.appendChild(item);
+      });
+      if (files.length === 0) {
+        leg.innerHTML = `<span style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted)">No files allocated</span>`;
+      }
+    }
+
+    // ─── Table Render ─────────────────────────────────────────────────────────
+    function renderTable() {
+      const container = document.getElementById('tableContainer');
+      if (files.length === 0) {
+        container.innerHTML = `<div class="empty-state"><i class="fas fa-folder-open"></i>No files allocated yet. Add a file to begin.</div>`;
+        return;
+      }
+
+      if (currentMethod === 'contiguous') {
+        let rows = files.map(f => `
+          <tr>
+            <td><span style="color:${f.color};font-weight:700">${f.name}</span></td>
+            <td>${f.blocks[0]}</td>
+            <td>${f.blocks.length}</td>
+            <td>${f.blocks[f.blocks.length - 1]}</td>
+            <td>
+              <div class="block-chain">
+                ${f.blocks.map(b => `<span class="chain-block" style="background:${f.color}">${b}</span>`).join(`<span class="chain-arrow">→</span>`)}
+              </div>
+            </td>
+          </tr>`).join('');
+        container.innerHTML = `
+          <table class="data-table">
+            <thead><tr>
+              <th>File</th><th>Start Block</th><th>Length</th><th>End Block</th><th>Block Sequence</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+
+      } else if (currentMethod === 'linked') {
+        let rows = files.map(f => {
+          const chain = f.blocks.map((b, i) => {
+            const next = i < f.blocks.length - 1 ? f.blocks[i + 1] : 'NULL';
+            return `<span class="chain-block" style="background:${f.color}" title="next→${next}">${b}</span>${i < f.blocks.length - 1 ? '<span class="chain-arrow">→</span>' : '<span class="chain-arrow">→ NULL</span>'}`;
+          }).join('');
+          return `<tr>
+            <td><span style="color:${f.color};font-weight:700">${f.name}</span></td>
+            <td>${f.blocks[0]}</td>
+            <td>${f.blocks[f.blocks.length - 1]}</td>
+            <td>${f.blocks.length}</td>
+            <td><div class="block-chain">${chain}</div></td>
+          </tr>`;
+        }).join('');
+        container.innerHTML = `
+          <table class="data-table">
+            <thead><tr>
+              <th>File</th><th>Start</th><th>End</th><th>Size</th><th>Linked Chain (block → next)</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+
+      } else if (currentMethod === 'indexed') {
+        let rows = files.map(f => {
+          const ptrs = f.blocks.map(b =>
+            `<span class="chain-block" style="background:${f.color}">${b}</span>`
+          ).join('<span class="chain-arrow">,</span>');
+          return `<tr>
+            <td><span style="color:${f.color};font-weight:700">${f.name}</span></td>
+            <td><span class="chain-block" style="background:${f.color};border:2px solid white">${f.indexBlock}</span></td>
+            <td>${f.blocks.length}</td>
+            <td><div class="block-chain">${ptrs}</div></td>
+          </tr>`;
+        }).join('');
+        container.innerHTML = `
+          <table class="data-table">
+            <thead><tr>
+              <th>File</th><th>Index Block ⬜</th><th>Size</th><th>Data Blocks</th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>`;
+      }
+    }
+
+    // ─── Add File ─────────────────────────────────────────────────────────────
+    function addFile() {
+      const nameEl = document.getElementById('fileName');
+      const sizeEl = document.getElementById('fileSize');
+      const startEl = document.getElementById('startBlock');
+
+      const name = nameEl.value.trim() || `file${files.length + 1}.dat`;
+      const size = parseInt(sizeEl.value) || 3;
+
+      if (size < 1 || size > 10) { showToast('File size must be 1–10 blocks.'); return; }
+      if (files.length >= FILE_COLORS.length) { showToast('Max 8 files reached.'); return; }
+
+      const colorIdx = files.length;
+      const color = FILE_COLORS[colorIdx];
+
+      let success = false;
+
+      if (currentMethod === 'contiguous') {
+        const prefer = parseInt(startEl.value);
+        success = allocateContiguous(name, size, color, isNaN(prefer) ? -1 : prefer);
+      } else if (currentMethod === 'linked') {
+        success = allocateLinked(name, size, color);
+      } else if (currentMethod === 'indexed') {
+        success = allocateIndexed(name, size, color);
+      }
+
+      if (success) {
+        nameEl.value = '';
+        sizeEl.value = '3';
+        startEl.value = '';
+        renderDisk();
+        renderFileList();
+        animateNewBlocks();
+      }
+    }
+
+    function allocateContiguous(name, size, color, preferStart) {
+      // Find contiguous run
+      let start = -1;
+      if (preferStart >= 0 && preferStart + size <= TOTAL_BLOCKS) {
+        let ok = true;
+        for (let i = preferStart; i < preferStart + size; i++) {
+          if (diskBlocks[i] !== null) { ok = false; break; }
+        }
+        if (ok) start = preferStart;
+      }
+      if (start < 0) {
+        // Find first fit
+        for (let i = 0; i <= TOTAL_BLOCKS - size; i++) {
+          let ok = true;
+          for (let j = i; j < i + size; j++) {
+            if (diskBlocks[j] !== null) { ok = false; break; }
+          }
+          if (ok) { start = i; break; }
+        }
+      }
+      if (start < 0) { showToast(`No contiguous space for ${size} blocks.`); return false; }
+
+      const fi = files.length;
+      const blocks = [];
+      for (let i = start; i < start + size; i++) {
+        diskBlocks[i] = fi;
+        blocks.push(i);
+      }
+      files.push({ name, size, color, blocks, indexBlock: null });
+      return true;
+    }
+
+    function allocateLinked(name, size, color) {
+      const freeBlocks = [];
+      for (let i = 0; i < TOTAL_BLOCKS; i++) {
+        if (diskBlocks[i] === null) freeBlocks.push(i);
+      }
+      if (freeBlocks.length < size) { showToast(`Not enough free blocks (need ${size}, have ${freeBlocks.length}).`); return false; }
+
+      const fi = files.length;
+      const blocks = freeBlocks.slice(0, size);
+      blocks.forEach(b => diskBlocks[b] = fi);
+      files.push({ name, size, color, blocks, indexBlock: null });
+      return true;
+    }
+
+    function allocateIndexed(name, size, color) {
+      const freeBlocks = [];
+      for (let i = 0; i < TOTAL_BLOCKS; i++) {
+        if (diskBlocks[i] === null) freeBlocks.push(i);
+      }
+      // Need size data blocks + 1 index block
+      if (freeBlocks.length < size + 1) { showToast(`Not enough free blocks (need ${size + 1} including index, have ${freeBlocks.length}).`); return false; }
+
+      const fi = files.length;
+      const indexBlock = freeBlocks[0];
+      const blocks = freeBlocks.slice(1, size + 1);
+
+      diskBlocks[indexBlock] = fi;
+      blocks.forEach(b => diskBlocks[b] = fi);
+      files.push({ name, size, color, blocks, indexBlock });
+      return true;
+    }
+
+    // ─── Delete File ──────────────────────────────────────────────────────────
+    function deleteFile(fi) {
+      const f = files[fi];
+      f.blocks.forEach(b => diskBlocks[b] = null);
+      if (f.indexBlock !== null) diskBlocks[f.indexBlock] = null;
+
+      files.splice(fi, 1);
+
+      // Re-map diskBlocks indices after splice
+      for (let i = 0; i < TOTAL_BLOCKS; i++) {
+        if (diskBlocks[i] !== null && diskBlocks[i] > fi) {
+          diskBlocks[i]--;
+        }
+      }
+
+      renderDisk();
+      renderFileList();
+    }
+
+    function resetAll(silent = false) {
+      files = [];
+      diskBlocks = new Array(TOTAL_BLOCKS).fill(null);
+      renderDisk();
+      renderFileList();
+      if (!silent) showToast('All files cleared.');
+    }
+
+    // ─── File List ────────────────────────────────────────────────────────────
+    function renderFileList() {
+      const container = document.getElementById('fileListContainer');
+      const list = document.getElementById('fileList');
+      if (files.length === 0) {
+        container.style.display = 'none';
+        return;
+      }
+      container.style.display = '';
+      list.innerHTML = '';
+      files.forEach((f, i) => {
+        const item = document.createElement('div');
+        item.className = 'file-item';
+        item.innerHTML = `
+          <div class="color-dot" style="background:${f.color}"></div>
+          <div class="file-name">${f.name}</div>
+          <div class="file-blocks">${f.blocks.length} blk${f.indexBlock !== null ? '+idx' : ''}</div>
+          <button class="file-delete" onclick="deleteFile(${i})" title="Remove file"><i class="fas fa-times"></i></button>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    // ─── Animate ──────────────────────────────────────────────────────────────
+    function animateNewBlocks() {
+      if (files.length === 0) return;
+      const f = files[files.length - 1];
+      const allBlocks = [...f.blocks];
+      if (f.indexBlock !== null) allBlocks.unshift(f.indexBlock);
+
+      allBlocks.forEach((b, i) => {
+        const el = document.getElementById(`block-${b}`);
+        if (!el) return;
+        el.style.transform = 'scale(0)';
+        el.style.opacity = '0';
+        setTimeout(() => {
+          el.style.transition = 'transform 0.4s cubic-bezier(0.34,1.56,0.64,1), opacity 0.3s ease';
+          el.style.transform = 'scale(1)';
+          el.style.opacity = '1';
+        }, i * 60);
+      });
+    }
+
+    // ─── Toast ────────────────────────────────────────────────────────────────
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2800);
+    }
+  </script>
+</body>
+</html>
