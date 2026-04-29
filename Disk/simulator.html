@@ -3,23 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Disk Scheduling Visualization</title>
+    <title>Disk Scheduling Visualization - OS Visualizer</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="global-theme.css">
     <style>
-        body {
+        .sim-wrapper {
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background-color: #0a0a0a;
-            color: white;
             flex-direction: column;
-            font-family: 'Arial', sans-serif;
             perspective: 1000px;
-            overflow-x: hidden;
             padding: 20px;
         }
 
-        .container {
+        .disk-sim-container {
             position: relative;
             transform-style: preserve-3d;
             transform: rotateX(30deg);
@@ -219,7 +225,7 @@
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
             border: 1px solid #444;
-            width: 1800px;
+            width: 100%;
             max-width: 1000px;
         }
 
@@ -363,7 +369,46 @@
     </style>
 </head>
 <body>
-    <div class="controls">
+    <!-- Loading Screen -->
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+        <div class="loader-text">SEEKING_</div>
+    </div>
+
+    <!-- Particle Background -->
+    <div id="particles-js"></div>
+
+    <!-- NAV -->
+    <nav>
+        <a class="logo" href="../index.html">
+            <span class="logo-animation">OS VISUALIZER</span>
+        </a>
+        <div class="hamburger">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <ul>
+            <li><button class="button" onclick="location.href='../index.html';"><i class="fas fa-home"></i> Home</button></li>
+            <li class="dropdown">
+                <button class="button"><i class="fas fa-code-branch"></i> Algorithms</button>
+                <div class="dropdown-content">
+                    <a href="../c-code_lifecycle/index.html"><i class="fas fa-code"></i> Code Life Cycle</a>
+                    <a href="../process_scheduling/process.html"><i class="fas fa-tasks"></i> Process Scheduling</a>
+                    <a href="../process_sync/home.html"><i class="fas fa-sync"></i> Process Synchronization</a>
+                    <a href="../banker_algorithm/index.html"><i class="fas fa-university"></i> Bankers Algorithm</a>
+                    <a href="../deadlock_detection/deadlock_detection.html"><i class="fas fa-project-diagram"></i> DeadLock Detection (RAG)</a>
+                    <a href="../page_replacement/page_replacement_home.html"><i class="fas fa-exchange-alt"></i> Page Replacement</a>
+                    <a href="disk.html"><i class="fas fa-hdd"></i> Disk Scheduling</a>
+                    <a href="../file_allocation/file.html"><i class="fas fa-folder"></i> File Allocation</a>
+                    <a href="../mft_mvt/MVFT.html"><i class="fas fa-memory"></i> MFT and MVT</a>
+                </div>
+            </li>
+            <li><button class="button" onclick="location.href='../about.html';"><i class="fas fa-info-circle"></i> About</button></li>
+        </ul>
+    </nav>
+    <div class="container sim-wrapper">
+        <div class="controls">
         <h2>Disk Scheduling Visualization <span class="led"></span></h2>
         
         <div class="grid-container">
@@ -421,7 +466,7 @@
         </div>
     </div>
     
-    <div class="container">
+    <div class="disk-sim-container">
         <div class="disk-container" id="disk">
             <div class="disk-reflection"></div>
             <!--
@@ -784,5 +829,24 @@
             moveHead(0);
         });
     </script>
+    </div> <!-- .container.sim-wrapper end -->
+    <!-- Back to Top -->
+    <button class="back-to-top" aria-label="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">OS VISUALIZER</div>
+            <div class="social-links">
+                <a href="https://github.com/Vidith-Murthy/OS-Simulator" target="_blank" aria-label="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="global-theme.js"></script>
 </body>
 </html>

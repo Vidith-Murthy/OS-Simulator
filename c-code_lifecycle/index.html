@@ -3,13 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>C Program Lifecycle: From Program to Process</title>
+    <title>C Program Lifecycle — OS Visualizer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+    <!-- Loading Screen -->
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+        <div class="loader-text">COMPILING_</div>
+    </div>
+
+    <!-- Particle Background -->
+    <div id="particles-js"></div>
+
+    <!-- NAV -->
+    <nav>
+        <a class="logo" href="../index.html">
+            <span class="logo-animation">OS VISUALIZER</span>
+        </a>
+        <div class="hamburger">
+            <div></div>
+            <div></div>
+            <div></div>
+        </div>
+        <ul>
+            <li><button class="button" onclick="location.href='../index.html';"><i class="fas fa-home"></i> Home</button></li>
+            <li><button class="button" onclick="location.href='../about.html';"><i class="fas fa-info-circle"></i> About</button></li>
+        </ul>
+    </nav>
+
+    <!-- Main -->
     <div class="container">
-        <h1>C Program Lifecycle Visualization</h1>
-        
+        <div class="hero">
+            <div class="hero-badge">C PROGRAM LIFECYCLE</div>
+            <h1>
+                <span class="word">From</span> <span class="word highlight">Code</span><br>
+                <span class="word">to</span> <span class="word">Process</span>
+            </h1>
+            <p class="intro-text">
+                Explore the journey of a C program — from writing source code through compilation,
+                linking, and finally execution as a running process managed by the OS.
+            </p>
+        </div>
+
+        <div class="section-label">// COMPILATION PIPELINE</div>
+
         <!-- Main compilation pipeline -->
         <div class="stage-container">
             <div class="stages">
@@ -69,10 +117,12 @@ int main() {
                 </div>
             </div>
         </div>
+
+        <div class="section-label">// PROGRAM → PROCESS</div>
         
         <!-- Enhanced Program to Process Visualization -->
         <div class="process-visualization">
-            <h2 class="process-title">From Program to Process</h2>
+            <h2 class="process-main-title">From Program to Process</h2>
             <p class="process-description">When an executable runs, the operating system transforms it into a process with memory space and resources:</p>
             
             <div class="process-container">
@@ -94,7 +144,7 @@ int main() {
                 
                 <div class="process-section">
                     <div class="process-box">
-                        <div class="process-title">Running Process</div>
+                        <div class="process-box-title">Running Process</div>
                         <div class="process-content">
                             <div class="memory-layout">
                                 <div class="memory-section stack-section">
@@ -178,6 +228,94 @@ int main() {
         <p class="note">Click on each stage or step to learn more about that phase of the compilation or process creation.</p>
     </div>
 
+    <!-- Back to Top -->
+    <button class="back-to-top" aria-label="Back to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">OS VISUALIZER</div>
+            <div class="social-links">
+                <a href="https://github.com/Vidith-Murthy/OS-Simulator" target="_blank" aria-label="GitHub">
+                    <i class="fab fa-github"></i>
+                </a>
+            </div>
+        </div>
+    </footer>
+
     <script src="script.js"></script>
+    <script>
+        // Loader
+        window.addEventListener('load', function () {
+            setTimeout(function () {
+                const lw = document.querySelector('.loader-wrapper');
+                lw.style.opacity = '0';
+                lw.style.visibility = 'hidden';
+            }, 1200);
+        });
+
+        // Particles - monochrome
+        window.particlesJS("particles-js", {
+            "particles": {
+                "number": { "value": 30, "density": { "enable": true, "value_area": 1200 } },
+                "color": { "value": "#e03030" },
+                "shape": { "type": "circle" },
+                "opacity": { "value": 0.15, "random": true, "anim": { "enable": true, "speed": 0.5, "opacity_min": 0.03, "sync": false } },
+                "size": { "value": 1.5, "random": true },
+                "line_linked": { "enable": true, "distance": 180, "color": "#e03030", "opacity": 0.06, "width": 1 },
+                "move": { "enable": true, "speed": 0.4, "direction": "none", "random": true, "straight": false, "out_mode": "out" }
+            },
+            "interactivity": {
+                "detect_on": "canvas",
+                "events": {
+                    "onhover": { "enable": true, "mode": "grab" },
+                    "onclick": { "enable": false },
+                    "resize": true
+                },
+                "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 0.2 } } }
+            },
+            "retina_detect": true
+        });
+
+        // Nav scroll
+        window.addEventListener('scroll', function () {
+            document.querySelector('nav').classList.toggle('scrolled', window.scrollY > 50);
+            document.querySelector('.back-to-top').classList.toggle('visible', window.scrollY > 300);
+        });
+
+        // Back to top
+        document.querySelector('.back-to-top').addEventListener('click', function () {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Hamburger
+        const hamburger = document.querySelector('.hamburger');
+        const navMenu = document.querySelector('nav ul');
+        hamburger.addEventListener('click', function () {
+            hamburger.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+
+        // GSAP
+        gsap.registerPlugin(ScrollTrigger);
+        gsap.from('.hero-badge', { opacity: 0, y: 20, duration: 0.8, ease: "power3.out" });
+        gsap.from('h1 .word', { opacity: 0, y: 40, stagger: 0.12, duration: 1, delay: 0.3, ease: "power3.out" });
+        gsap.from('.intro-text', { opacity: 0, y: 20, duration: 1, delay: 0.9, ease: "power3.out" });
+        gsap.from('.section-label', { opacity: 0, duration: 0.8, delay: 1.1, ease: "power3.out" });
+
+        gsap.utils.toArray('.stage').forEach((el, i) => {
+            gsap.from(el, {
+                scrollTrigger: { trigger: el, start: "top bottom-=80", toggleActions: "play none none none" },
+                y: 30, opacity: 0, duration: 0.6, delay: i * 0.1, ease: "power3.out"
+            });
+        });
+
+        gsap.from('.process-visualization', {
+            scrollTrigger: { trigger: '.process-visualization', start: "top bottom-=80" },
+            y: 40, opacity: 0, duration: 0.8, ease: "power3.out"
+        });
+    </script>
 </body>
 </html>
