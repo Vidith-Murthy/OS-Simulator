@@ -7,25 +7,22 @@ This project was developed as part of our Operating Systems course to provide a 
 # Team Members 
 <h3>
   
-231CS251 - Sadipirala Basitha<br>
+241CS161 - Utkoor Venkatesh<br>
 
-231CS252 - Sahil Kumar<br>
+241CS162 - Veena S<br>
 
-231CS253 - Saksham Parmar<br>
+241CS163 - Vikash Patel<br>
 
-231CS254 - Samved Sajankila<br>
+241CS165 - Vishal Murugan<br>
 
-231CS255 - Shreya Pradhan<br>
+241CS261 - Tanmay Gaur<br>
 
-231CS256 - SK Sharhaan Naim<br>
+241CS262 - Umar Farooq H Nadaf<br>
 
-231CS257 - Sravanthi M<br>
+241CS263 - Vidith Venkatesha Murthy<br>
 
-231CS258 - Srishti Kumari<br>
+241CS264 - Vivin Dsouza<br>
 
-231CS259 - Suhani Vaidya<br>
-
-231CS260 - Tungena Sai Nishnath Rao<br>
 </h3>
 
 <br>
