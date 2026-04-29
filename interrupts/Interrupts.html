@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INTERRUPTS</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;--s1:#111111;--s2:#161616;--s3:#1c1c1c;
+  --b:#252525;--b2:#555555;--text:#e8e8e8;--sub:#a0a0a0;--dim:#505050;
+  --mono:'Space Mono',monospace;--sans:'Syne',sans-serif;
+  --a:#60a5fa;--ag:rgba(96,165,250,0.10);--ab:rgba(96,165,250,0.25);
+  --ok:#34d399;--okg:rgba(52,211,153,0.10);--okb:rgba(52,211,153,0.25);
+  --warn:#fb923c;--warng:rgba(251,146,60,0.10);--warnb:rgba(251,146,60,0.25);
+  --fail:#f87171;--failg:rgba(248,113,113,0.10);--failb:rgba(248,113,113,0.25);
+  --pu:#a78bfa;--pug:rgba(167,139,250,0.10);--pub:rgba(167,139,250,0.25);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+html{font-size:13px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:0.45;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E")}
+
+/* ── HEADER ── */
+header{height:48px;flex-shrink:0;display:flex;align-items:stretch;border-bottom:1px solid var(--b);background:var(--s1)}
+.hdr-logo{display:flex;align-items:center;gap:9px;padding:0 20px;border-right:1px solid var(--b);flex-shrink:0}
+.logo-mark{width:22px;height:22px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:2px}
+.logo-mark span{border-radius:2px;background:var(--a)}
+.logo-mark span:nth-child(2){opacity:0.55}.logo-mark span:nth-child(3){opacity:0.3}.logo-mark span:nth-child(4){opacity:0.12}
+.logo-name{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:3px;color:var(--text)}
+.hdr-center{flex:1;display:flex;align-items:center;justify-content:center;gap:20px}
+.hdr-title{font-family:var(--mono);font-size:11px;letter-spacing:4px;color:var(--sub);text-transform:uppercase}
+.hdr-right{display:flex;align-items:center;gap:12px;padding:0 20px;border-left:1px solid var(--b);font-family:var(--mono);font-size:10px;color:var(--sub)}
+.cpu-status{display:flex;align-items:center;gap:6px}
+.cpu-dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 8px var(--ok);transition:all 0.3s}
+.cpu-dot.busy{background:var(--warn);box-shadow:0 0 10px var(--warn);animation:dotPulse 0.8s ease infinite alternate}
+.cpu-dot.interrupt{background:var(--fail);box-shadow:0 0 12px var(--fail)}
+@keyframes dotPulse{from{opacity:0.6}to{opacity:1}}
+
+/* ── LAYOUT ── */
+.app-body{flex:1;display:grid;grid-template-columns:268px 1fr 268px;overflow:hidden;min-height:0}
+.pane{border-right:1px solid var(--b);display:flex;flex-direction:column;overflow:hidden}
+.pane:last-child{border-right:none}
+.pane-head{padding:11px 16px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;background:var(--s1)}
+.pane-title{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--sub)}
+.pane-badge{font-family:var(--mono);font-size:9px;color:var(--a);background:var(--ag);border:1px solid var(--ab);padding:2px 8px;border-radius:20px;transition:all 0.3s}
+.pane-badge.warn{color:var(--warn);background:var(--warng);border-color:var(--warnb)}
+.pane-badge.ok{color:var(--ok);background:var(--okg);border-color:var(--okb)}
+.pane-scroll{flex:1;overflow-y:auto;padding:14px}
+
+/* ── SHARED ── */
+.section-hd{font-family:var(--mono);font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between}
+.sep{height:1px;background:var(--b);margin:12px 0}
+.info-card{background:var(--s2);border:1px solid var(--b);border-left:2px solid var(--a);border-radius:0 6px 6px 0;padding:10px 13px;margin-bottom:12px;transition:border-color 0.3s,background 0.3s}
+.info-card.warn{border-left-color:var(--warn);background:var(--warng)}
+.info-card.ok{border-left-color:var(--ok);background:var(--okg)}
+.info-card p{font-size:11px;color:var(--sub);line-height:1.8}
+.info-card strong{color:var(--a);font-weight:700}
+.info-card.warn strong{color:var(--warn)}
+.info-card.ok strong{color:var(--ok)}
+
+.btn{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase;border:none;border-radius:5px;padding:8px 13px;cursor:pointer;transition:all 0.15s;white-space:nowrap;flex-shrink:0}
+.btn:disabled{opacity:0.35;pointer-events:none}
+.btn-primary{background:var(--a);color:#0a0a0a}.btn-primary:hover{filter:brightness(1.15)}.btn-primary:active{transform:scale(0.96)}
+.btn-warn{background:var(--warn);color:#0a0a0a}.btn-warn:hover{filter:brightness(1.1)}
+.btn-ghost{background:var(--ag);color:var(--a);border:1px solid var(--ab)}.btn-ghost:hover{background:var(--ab)}
+.btn-dim{background:transparent;color:var(--dim);border:1px solid var(--b);width:100%;margin-top:6px}.btn-dim:hover{color:var(--fail);border-color:var(--fail)}
+.btn-row{display:flex;gap:7px;margin-bottom:10px}
+
+/* ── LEFT: IRQ SOURCES ── */
+.irq-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 11px;border-radius:5px;margin-bottom:5px;
+  background:var(--s2);border:1px solid var(--b);
+  cursor:pointer;transition:all 0.15s;position:relative;overflow:hidden;
+}
+.irq-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--dim);transition:background 0.2s}
+.irq-item:hover{border-color:var(--ab);background:var(--ag)}
+.irq-item:hover::before{background:var(--a)}
+.irq-item.active-irq{border-color:var(--warn);background:var(--warng);animation:irqShake 0.3s ease}
+.irq-item.active-irq::before{background:var(--warn)}
+.irq-item.done-irq::before{background:var(--ok)}
+.irq-item.done-irq{border-color:var(--okb);background:var(--okg)}
+.irq-item.disabled-irq{opacity:0.35;pointer-events:none}
+@keyframes irqShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+.irq-num{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--warn);width:36px;flex-shrink:0}
+.irq-info{flex:1;min-width:0}
+.irq-name{font-family:var(--mono);font-size:10px;color:var(--text);margin-bottom:1px}
+.irq-dev{font-size:9px;color:var(--dim)}
+.irq-prio{font-family:var(--mono);font-size:8px;padding:2px 5px;border-radius:3px;flex-shrink:0}
+.irq-prio.h{color:var(--fail);background:var(--failg);border:1px solid var(--failb)}
+.irq-prio.m{color:var(--warn);background:var(--warng);border:1px solid var(--warnb)}
+.irq-prio.l{color:var(--sub);background:var(--s3);border:1px solid var(--b)}
+.irq-led{width:6px;height:6px;border-radius:50%;background:var(--b2);flex-shrink:0;transition:all 0.2s}
+.irq-item.active-irq .irq-led{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.irq-item.done-irq .irq-led{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+
+/* CPU flags panel */
+.flags-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px}
+.flag-cell{background:var(--s2);border:1px solid var(--b);border-radius:4px;padding:5px 7px;font-family:var(--mono);font-size:10px;text-align:center;transition:all 0.3s}
+.flag-cell .fk{color:var(--dim);font-size:8px;display:block;margin-bottom:2px}
+.flag-cell .fv{font-weight:700;color:var(--text)}
+.flag-cell.on .fv{color:var(--ok)}.flag-cell.on{border-color:var(--okb)}
+.flag-cell.off .fv{color:var(--fail)}.flag-cell.off{border-color:var(--failb)}
+
+/* speed row */
+.speed-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.speed-lbl{font-family:var(--mono);font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+input[type=range]{flex:1;accent-color:var(--a);cursor:pointer}
+.mode-row{display:flex;gap:5px;margin-bottom:10px}
+.mode-btn{flex:1;font-family:var(--mono);font-size:9px;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:6px;border-radius:4px;border:1px solid var(--b);background:var(--s2);color:var(--dim);cursor:pointer;transition:all 0.15s;text-align:center}
+.mode-btn.on{background:var(--ag);border-color:var(--a);color:var(--a)}
+
+/* ── CENTER: PIPELINE VISUALISER ── */
+.pipeline-body{flex:1;overflow-y:auto;overflow-x:hidden;padding:18px 16px;display:flex;flex-direction:column;gap:10px}
+
+/* component cards */
+.hw-row{display:grid;gap:8px}
+.hw-row.r2{grid-template-columns:1fr 1fr}
+.hw-row.r3{grid-template-columns:1fr 1fr 1fr}
+
+.hw-box{
+  background:var(--s2);border:1px solid var(--b);border-radius:7px;
+  padding:12px 14px;transition:all 0.35s;position:relative;overflow:hidden;
+}
+.hw-box::after{content:'';position:absolute;inset:0;border-radius:7px;opacity:0;transition:opacity 0.35s;pointer-events:none}
+.hw-box.hl-warn{border-color:var(--warn);background:var(--warng);box-shadow:0 0 18px var(--warng)}
+.hw-box.hl-ok{border-color:var(--ok);background:var(--okg);box-shadow:0 0 18px var(--okg)}
+.hw-box.hl-blue{border-color:var(--a);background:var(--ag);box-shadow:0 0 18px var(--ag)}
+.hw-box.hl-pu{border-color:var(--pu);background:var(--pug);box-shadow:0 0 18px var(--pug)}
+.hw-box.hl-fail{border-color:var(--fail);background:var(--failg);box-shadow:0 0 18px var(--failg)}
+
+.hw-label{font-family:var(--mono);font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.hw-name{font-family:var(--sans);font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.hw-sub{font-size:10px;color:var(--sub);line-height:1.5}
+.hw-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--a);margin-top:6px;min-height:20px;transition:color 0.3s}
+
+/* registers */
+.reg-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-top:7px}
+.reg-cell{background:var(--s3);border:1px solid var(--b);border-radius:3px;padding:3px 6px;font-family:var(--mono);font-size:9px;display:flex;justify-content:space-between;align-items:center;transition:all 0.3s}
+.reg-k{color:var(--dim)}.reg-v{color:var(--a);font-weight:700}
+.reg-cell.saved{border-color:var(--warn);background:var(--warng)}.reg-cell.saved .reg-v{color:var(--warn)}
+.reg-cell.restored{border-color:var(--ok);background:var(--okg)}.reg-cell.restored .reg-v{color:var(--ok)}
+
+/* IDT mini-table */
+.idt-mini{width:100%;font-family:var(--mono);font-size:9px;border-collapse:collapse;margin-top:6px}
+.idt-mini th{color:var(--dim);padding:2px 4px;text-align:left;border-bottom:1px solid var(--b)}
+.idt-mini td{padding:2px 4px;color:var(--sub);border-bottom:1px solid var(--s3);transition:all 0.2s}
+.idt-mini tr.idt-hi td{color:var(--a);background:var(--ag)}
+.idt-mini tr.idt-hi td:first-child{color:var(--warn)}
+
+/* stack mini */
+.stack-mini-item{font-family:var(--mono);font-size:9px;padding:3px 6px;background:var(--s3);border:1px solid var(--b);border-radius:3px;margin-bottom:2px;display:flex;justify-content:space-between;transition:all 0.3s}
+.stack-mini-item.pushed{border-color:var(--warn);background:var(--warng);color:var(--warn);animation:slideIn 0.2s ease}
+.stack-mini-item.popped{border-color:var(--ok);background:var(--okg);color:var(--ok)}
+@keyframes slideIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* ISR steps */
+.isr-steps{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.isr-step{font-family:var(--mono);font-size:9px;padding:4px 8px;border-radius:3px;background:var(--s3);border:1px solid var(--b);color:var(--dim);display:flex;align-items:center;gap:7px;transition:all 0.3s}
+.isr-step.running{border-color:var(--ok);background:var(--okg);color:var(--ok)}
+.isr-step.done{border-color:var(--b);color:var(--sub);opacity:0.7}
+.isr-step-num{font-size:8px;color:var(--dim);width:14px;flex-shrink:0}
+.isr-step.running .isr-step-num{color:var(--ok)}
+
+/* arrow connectors between hw-rows */
+.arrow-row{display:flex;align-items:center;justify-content:center;height:18px;position:relative}
+.arrow-line{height:2px;background:var(--b);flex:1;position:relative;transition:background 0.3s}
+.arrow-line.active{background:var(--warn)}
+.arrow-line.done{background:var(--ok)}
+.arrow-line::after{content:'▶';position:absolute;right:-6px;top:50%;transform:translateY(-50%);font-size:8px;color:inherit}
+.arrow-label{font-family:var(--mono);font-size:8px;color:var(--dim);padding:0 8px;white-space:nowrap;transition:color 0.3s}
+.arrow-line.active+.arrow-label,.arrow-label.active{color:var(--warn)}
+.arrow-label.done{color:var(--ok)}
+
+/* step progress bar */
+.progress-bar-wrap{flex-shrink:0;padding:0 16px 12px;border-top:1px solid var(--b);background:var(--s1)}
+.progress-steps{display:flex;gap:2px;padding-top:10px;margin-bottom:8px}
+.progress-step{flex:1;height:3px;background:var(--b);border-radius:2px;transition:all 0.3s;cursor:pointer}
+.progress-step.done{background:var(--ok)}
+.progress-step.current{background:var(--warn);box-shadow:0 0 6px var(--warn);animation:barPulse 1s ease infinite alternate}
+@keyframes barPulse{from{opacity:0.7}to{opacity:1}}
+.progress-info{display:flex;align-items:center;justify-content:space-between}
+.progress-name{font-family:var(--mono);font-size:10px;color:var(--text);font-weight:700}
+.progress-desc{font-size:10px;color:var(--sub);margin-top:1px}
+.progress-num{font-family:var(--mono);font-size:9px;color:var(--dim)}
+.center-btns{display:flex;gap:7px;padding:8px 16px;border-top:1px solid var(--b);background:var(--s1)}
+
+/* ── RIGHT: LOG + STACK ── */
+.log-entry{font-family:var(--mono);font-size:9px;line-height:1.6;padding:5px 9px;border-radius:3px;background:var(--s2);border-left:2px solid var(--b2);color:var(--sub);margin-bottom:3px;animation:logFade 0.2s ease}
+@keyframes logFade{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+.log-entry.l-irq{border-left-color:var(--warn);color:var(--text)}
+.log-entry.l-cpu{border-left-color:var(--pu)}
+.log-entry.l-isr{border-left-color:var(--ok)}
+.log-entry.l-sys{border-left-color:var(--a)}
+.log-entry.l-err{border-left-color:var(--fail);color:var(--fail)}
+.log-ts{color:var(--dim);margin-right:6px;font-size:8px}
+
+.stack-frame{font-family:var(--mono);font-size:9px;padding:5px 9px;border-radius:3px;margin-bottom:3px;background:var(--s2);border:1px solid var(--b);display:flex;gap:8px;align-items:center;transition:all 0.3s}
+.stack-frame.top{border-color:var(--warn);background:var(--warng);color:var(--warn)}
+.stack-frame.old{border-color:var(--ok);background:var(--okg);color:var(--ok)}
+.sf-addr{color:var(--dim);width:52px;flex-shrink:0;font-size:8px}
+.sf-label{flex:1}
+.sf-val{color:var(--dim);font-size:8px}
+
+/* stat counters */
+.stats-row{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.stat-box{background:var(--s2);border:1px solid var(--b);border-radius:5px;padding:8px 10px;text-align:center}
+.stat-num{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--a)}
+.stat-lbl{font-family:var(--mono);font-size:8px;color:var(--dim);margin-top:2px;text-transform:uppercase;letter-spacing:1px}
+
+@keyframes flash{0%,100%{opacity:1}40%{opacity:0.2}}
+.flash-anim{animation:flash 0.35s ease}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="hdr-logo">
+    <div class="logo-mark"><span></span><span></span><span></span><span></span></div>
+    <span class="logo-name">OS · SIM</span>
+  </div>
+  <div class="hdr-center">
+    <span class="hdr-title">INTERRUPT PIPELINE SIMULATOR</span>
+  </div>
+  <div class="hdr-right">
+    <div class="cpu-status">
+      <div class="cpu-dot" id="cpu-dot"></div>
+      <span id="cpu-state-txt">IDLE</span>
+    </div>
+    <span style="color:var(--b2)">|</span>
+    <span id="cycle-count" style="color:var(--dim)">0 cycles</span>
+  </div>
+</header>
+
+<div class="app-body">
+
+<!-- ══ LEFT PANE ══ -->
+<div class="pane">
+  <div class="pane-head">
+    <span class="pane-title">DEVICE CONTROLLERS</span>
+    <span class="pane-badge" id="left-badge">IDLE</span>
+  </div>
+  <div class="pane-scroll">
+
+    <div class="info-card" id="info-card">
+      <p>Click a <strong>device controller</strong> to trigger an interrupt. The CPU will stop what it is doing and transfer execution to the <strong>interrupt service routine</strong>. Use <strong>Step</strong> mode to walk through each stage.</p>
+    </div>
+
+    <div class="section-hd">DEVICE CONTROLLERS</div>
+    <div id="irq-list"></div>
+
+    <div class="sep"></div>
+    <div class="section-hd">INTERRUPT ENABLE FLAG</div>
+    <div class="flags-grid" id="flags-grid">
+      <div class="flag-cell on" id="flag-IF"><span class="fk">IF</span><span class="fv">1</span></div>
+      <div class="flag-cell" id="flag-TF"><span class="fk">TF</span><span class="fv">0</span></div>
+      <div class="flag-cell" id="flag-NT"><span class="fk">NT</span><span class="fv">0</span></div>
+    </div>
+
+    <div class="sep"></div>
+    <div class="section-hd">SIMULATION</div>
+    <div class="mode-row">
+      <div class="mode-btn on" id="mode-step" onclick="setMode('step')">STEP</div>
+      <div class="mode-btn" id="mode-auto" onclick="setMode('auto')">AUTO</div>
+    </div>
+    <div class="speed-row">
+      <span class="speed-lbl">SPEED</span>
+      <input type="range" id="speed-inp" min="300" max="2500" value="900" step="100" oninput="updateSpeed(this.value)">
+      <span class="speed-lbl" id="speed-lbl">0.9s</span>
+    </div>
+
+    <button class="btn btn-dim" onclick="hardReset()">↺ RESET</button>
+  </div>
+</div>
+
+<!-- ══ CENTER PANE ══ -->
+<div class="pane">
+  <div class="pane-head">
+    <span class="pane-title">INTERRUPT CYCLE</span>
+    <span class="pane-badge warn" id="center-badge">WAITING</span>
+  </div>
+
+  <div class="pipeline-body" id="pipeline-body">
+
+    <!-- Row 1: Device -->
+    <div class="hw-row r2">
+      <div class="hw-box" id="box-device">
+        <div class="hw-label">DEVICE CONTROLLER</div>
+        <div class="hw-name" id="dev-name">— Idle —</div>
+        <div class="hw-sub" id="dev-sub">No I/O operation complete</div>
+      </div>
+      <div class="hw-box" id="box-bus">
+        <div class="hw-label">SYSTEM BUS</div>
+        <div class="hw-name">Interrupt-Request Line</div>
+        <div class="hw-sub" id="bus-sub">No signal on interrupt-request line</div>
+        <div class="hw-val" id="bus-val">—</div>
+      </div>
+    </div>
+
+    <!-- Arrow 1 -->
+    <div class="arrow-row">
+      <div class="arrow-line" id="arr1"></div>
+      <span class="arrow-label" id="arr1-lbl">signal via system bus</span>
+      <div class="arrow-line" id="arr1b" style="max-width:60px"></div>
+    </div>
+
+    <!-- Row 2: PIC + CPU -->
+    <div class="hw-row r2">
+      <div class="hw-box" id="box-pic">
+        <div class="hw-label">INTERRUPT-REQUEST LINE</div>
+        <div class="hw-name">CPU senses interrupt</div>
+        <div class="hw-sub" id="pic-sub">CPU checks interrupt-request line after each instruction</div>
+        <div class="hw-val" id="pic-val">—</div>
+      </div>
+      <div class="hw-box" id="box-cpu">
+        <div class="hw-label">CPU</div>
+        <div class="hw-name">Processor State</div>
+        <div class="hw-sub" id="cpu-sub">Executing interrupted computation</div>
+        <div class="reg-grid" id="reg-grid">
+          <div class="reg-cell" id="r-eip"><span class="reg-k">EIP</span><span class="reg-v" id="rv-eip">0x0042</span></div>
+          <div class="reg-cell" id="r-esp"><span class="reg-k">ESP</span><span class="reg-v" id="rv-esp">0xFFF8</span></div>
+          <div class="reg-cell" id="r-eax"><span class="reg-k">EAX</span><span class="reg-v" id="rv-eax">0x0000</span></div>
+          <div class="reg-cell" id="r-efl"><span class="reg-k">EFL</span><span class="reg-v" id="rv-efl">0x0202</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow 2 -->
+    <div class="arrow-row">
+      <div class="arrow-line" id="arr2"></div>
+      <span class="arrow-label" id="arr2-lbl">CPU stops · transfers execution</span>
+      <div class="arrow-line" id="arr2b" style="max-width:60px"></div>
+    </div>
+
+    <!-- Row 3: IDT + Context Stack -->
+    <div class="hw-row r2">
+      <div class="hw-box" id="box-idt">
+        <div class="hw-label">LOW MEMORY</div>
+        <div class="hw-name">Interrupt Vector</div>
+        <div class="hw-sub">Table of pointers to interrupt service routines</div>
+        <table class="idt-mini" id="idt-table">
+          <tr><th>DEVICE</th><th>NUMBER</th><th>SERVICE ROUTINE</th><th>PRIORITY</th></tr>
+        </table>
+      </div>
+      <div class="hw-box" id="box-ctx">
+        <div class="hw-label">STATE INFORMATION</div>
+        <div class="hw-name">Save / Restore State</div>
+        <div class="hw-sub" id="ctx-sub">State information not yet saved</div>
+        <div id="stack-mini" style="margin-top:6px"></div>
+      </div>
+    </div>
+
+    <!-- Arrow 3 -->
+    <div class="arrow-row">
+      <div class="arrow-line" id="arr3"></div>
+      <span class="arrow-label" id="arr3-lbl">indexed through interrupt vector</span>
+      <div class="arrow-line" id="arr3b" style="max-width:60px"></div>
+    </div>
+
+    <!-- Row 4: ISR + IRET -->
+    <div class="hw-row r2">
+      <div class="hw-box" id="box-isr">
+        <div class="hw-label">INTERRUPT SERVICE ROUTINE</div>
+        <div class="hw-name" id="isr-name">Interrupt Handler</div>
+        <div class="hw-sub" id="isr-sub">Waiting for interrupt…</div>
+        <div class="isr-steps" id="isr-steps"></div>
+      </div>
+      <div class="hw-box" id="box-iret">
+        <div class="hw-label">CPU RESUMES</div>
+        <div class="hw-name">Interrupted Computation</div>
+        <div class="hw-sub" id="iret-sub">Saved return address not yet loaded into program counter</div>
+        <div class="hw-val" id="iret-val">—</div>
+      </div>
+    </div>
+
+  </div><!-- /pipeline-body -->
+
+  <!-- Step progress bar -->
+  <div class="progress-bar-wrap">
+    <div class="progress-steps" id="progress-steps"></div>
+    <div class="progress-info">
+      <div>
+        <div class="progress-name" id="prog-name">Ready</div>
+        <div class="progress-desc" id="prog-desc">Fire an interrupt to begin the simulation</div>
+      </div>
+      <div class="progress-num" id="prog-num">—</div>
+    </div>
+  </div>
+  <div class="center-btns">
+    <button class="btn btn-ghost" id="btn-step" onclick="doStep()" style="flex:1">▶ NEXT STEP</button>
+    <button class="btn btn-warn" onclick="fireRandom()" style="flex:1">⚡ RANDOM DEVICE</button>
+  </div>
+</div>
+
+<!-- ══ RIGHT PANE ══ -->
+<div class="pane">
+  <div class="pane-head">
+    <span class="pane-title">INTERRUPT LOG</span>
+    <span class="pane-badge" id="right-badge">0 EVENTS</span>
+  </div>
+  <div class="pane-scroll">
+
+    <div class="stats-row">
+      <div class="stat-box"><div class="stat-num" id="stat-total">0</div><div class="stat-lbl">INTERRUPTS</div></div>
+      <div class="stat-box"><div class="stat-num" id="stat-cycles">0</div><div class="stat-lbl">DEFERRED</div></div>
+    </div>
+
+    <div class="section-hd">SAVED STATE INFORMATION</div>
+    <div id="stack-list" style="margin-bottom:10px"></div>
+
+    <div class="sep"></div>
+    <div class="section-hd">
+      EVENT LOG
+      <span style="font-family:var(--mono);font-size:8px;color:var(--dim);cursor:pointer" onclick="clearLog()">CLR</span>
+    </div>
+    <div id="log-list"></div>
+
+  </div>
+</div>
+
+</div><!-- /app-body -->
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────────────────────
+const IRQS = [
+  { n:0,  vec:0x20, name:'Timer',          dev:'Clock Device',          handler:'Timer Handler',          prio:'h', desc:'Clock device completes periodic tick — informs device driver.' },
+  { n:1,  vec:0x21, name:'Keyboard',       dev:'Keyboard Controller',   handler:'Keyboard Handler',       prio:'h', desc:'Keyboard controller completes transfer of character to local buffer.' },
+  { n:3,  vec:0x23, name:'Serial Port',    dev:'Serial Controller',     handler:'Serial Handler',         prio:'m', desc:'Serial port controller completes data transfer to its local buffer.' },
+  { n:6,  vec:0x26, name:'Disk',           dev:'Disk Controller',       handler:'Disk Handler',           prio:'l', desc:'Disk controller completes transfer of data — informs device driver.' },
+  { n:8,  vec:0x70, name:'Real-Time Clock',dev:'Clock Controller',      handler:'Clock Handler',          prio:'h', desc:'Real-time clock controller completes its operation.' },
+  { n:12, vec:0x74, name:'Mouse',          dev:'Mouse Controller',      handler:'Mouse Handler',          prio:'m', desc:'Mouse controller completes transfer of movement data to local buffer.' },
+  { n:14, vec:0x76, name:'Disk (Primary)', dev:'Disk Controller',       handler:'Disk Handler',           prio:'m', desc:'Primary disk controller informs device driver that operation is finished.' },
+  { n:9,  vec:0x71, name:'Network',        dev:'Network Controller',    handler:'Network Handler',        prio:'h', desc:'Network controller completes transfer of data to its local buffer.' },
+];
+
+const STEPS = [
+  { id:'device',  name:'I/O Operation Complete',    desc:'The device controller finishes its operation and informs the device driver via an interrupt.',                                    box:'box-device', hl:'hl-warn', arr:null   },
+  { id:'bus',     name:'Signal on Request Line',    desc:'The device controller sends a signal to the CPU by way of the system bus (the interrupt-request line).',                         box:'box-bus',    hl:'hl-warn', arr:'arr1' },
+  { id:'pic',     name:'CPU Senses Interrupt',      desc:'The CPU senses the interrupt-request line after executing every instruction and detects that a controller has asserted a signal.',box:'box-pic',   hl:'hl-warn', arr:'arr1' },
+  { id:'cpuack',  name:'CPU Stops Execution',       desc:'The CPU stops what it is doing and transfers execution to a fixed location — the starting address of the service routine.',      box:'box-cpu',    hl:'hl-pu',  arr:'arr2' },
+  { id:'pushctx', name:'State Information Saved',   desc:'The interrupt architecture saves the state information of whatever was interrupted so it can restore this information after servicing.', box:'box-ctx', hl:'hl-warn', arr:'arr2' },
+  { id:'idt',     name:'Interrupt Vector Indexed',  desc:'The interrupt number is used as an index into the interrupt vector — the table of pointers to interrupt service routines stored in low memory.', box:'box-idt', hl:'hl-blue', arr:'arr2' },
+  { id:'isr',     name:'Service Routine Executes',  desc:'The interrupt service routine executes. The handler saves state it will change, determines the cause, and performs necessary processing.', box:'box-isr', hl:'hl-ok', arr:'arr3' },
+  { id:'eoi',     name:'Interrupt Cleared',         desc:'The handler clears the interrupt by servicing the device. The device driver gives control back to other parts of the operating system.', box:'box-pic', hl:'hl-ok', arr:'arr3' },
+  { id:'iret',    name:'Computation Resumes',       desc:'The saved return address is loaded into the program counter. The interrupted computation resumes as though the interrupt had not occurred.', box:'box-iret', hl:'hl-ok', arr:'arr3' },
+];
+
+// ISR sub-steps per irq type
+function getISRSteps(irq){
+  const base = ['Save state information that will be changed','Determine the cause of the interrupt','Read data from device local buffer','Perform necessary processing','Return data or pointer to device driver','Restore saved state information'];
+  const extra = {
+    0: ['Increment system time','Notify scheduler of clock tick','Check for deferred work','Return control to operating system'],
+    1: ['Read character from device local buffer','Determine cause of interrupt','Transfer character to waiting process','Give control to device driver'],
+    14:['Determine cause of interrupt','Read data from device local buffer','Signal waiting process that transfer is complete','Give control to device driver'],
+    9: ['Determine cause of interrupt','Read data from device local buffer','Perform necessary processing','Give control to operating system'],
+  };
+  return (extra[irq.n] || base).slice();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let state = {
+  activeIRQ: null, stepIdx: -1, running: false,
+  mode: 'step', speed: 900, autoTimer: null,
+  regs: { eip:0x0042, esp:0xFFF8, eax:0x0000, efl:0x0202 },
+  savedCtx: null, stack: [],
+  totalInts: 0, totalCycles: 0,
+  logCount: 0, isrStepIdx: 0,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────────────────────────────
+function init(){
+  buildIRQList();
+  buildIDT();
+  buildProgressBar();
+  updateRegs();
+  log('Simulator ready — CPU executing computation, interrupt enable on', 'l-sys');
+}
+
+function buildIRQList(){
+  const el = document.getElementById('irq-list');
+  el.innerHTML = '';
+  IRQS.forEach(irq => {
+    const d = document.createElement('div');
+    d.className = 'irq-item';
+    d.id = 'irqi-'+irq.n;
+    d.onclick = () => fireIRQ(irq);
+    d.innerHTML = `
+      <div class="irq-led"></div>
+      <div class="irq-num">IRQ ${irq.n}</div>
+      <div class="irq-info">
+        <div class="irq-name">${irq.name}</div>
+        <div class="irq-dev">${irq.dev}</div>
+      </div>
+      <div class="irq-prio ${irq.prio}">${irq.prio==='h'?'HIGH':irq.prio==='m'?'MED':'LOW'}</div>
+    `;
+    el.appendChild(d);
+  });
+}
+
+function buildIDT(){
+  const t = document.getElementById('idt-table');
+  t.innerHTML = '<tr><th>IRQ</th><th>VEC</th><th>HANDLER</th><th>RING</th></tr>';
+  IRQS.forEach(irq => {
+    const tr = document.createElement('tr');
+    tr.id = 'idt-'+irq.n;
+    tr.innerHTML = `<td>IRQ${irq.n}</td><td>0x${irq.vec.toString(16).toUpperCase()}</td><td>${irq.handler}</td><td>0</td>`;
+    t.appendChild(tr);
+  });
+}
+
+function buildProgressBar(){
+  const el = document.getElementById('progress-steps');
+  el.innerHTML = '';
+  STEPS.forEach((_,i) => {
+    const d = document.createElement('div');
+    d.className = 'progress-step';
+    d.id = 'ps-'+i;
+    el.appendChild(d);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FIRE
+// ─────────────────────────────────────────────────────────────────────────────
+function fireIRQ(irq){
+  if(state.running && state.stepIdx >= 0 && state.stepIdx < STEPS.length){
+    log('Cannot fire — service routine already in progress', 'l-err'); return;
+  }
+  stopAuto();
+  resetVisuals();
+
+  state.activeIRQ = irq;
+  state.stepIdx = 0;
+  state.running = true;
+  state.isrStepIdx = 0;
+  state.savedCtx = null;
+  state.stack = [];
+  state.totalInts++;
+
+  // flash IRQ row
+  const row = document.getElementById('irqi-'+irq.n);
+  if(row){ row.classList.add('active-irq'); }
+
+  setCPUState('INTERRUPTED', 'interrupt');
+  document.getElementById('left-badge').textContent = irq.name;
+  document.getElementById('left-badge').className = 'pane-badge warn';
+  setInfoCard(`<strong>${irq.name} (${irq.dev})</strong> has finished its operation and is informing the device driver via an interrupt.`, 'warn');
+
+  buildISRSteps(irq);
+
+  log(`${irq.dev} — controller informs device driver that operation is finished`, 'l-irq');
+
+  if(state.mode === 'auto') scheduleAuto();
+  else applyStep(0);
+}
+
+function fireRandom(){
+  fireIRQ(IRQS[Math.floor(Math.random()*IRQS.length)]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STEP ENGINE
+// ─────────────────────────────────────────────────────────────────────────────
+function doStep(){
+  if(!state.activeIRQ){ log('No interrupt in progress — select a device controller', 'l-err'); return; }
+  if(state.stepIdx >= STEPS.length){ return; }
+  applyStep(state.stepIdx);
+  state.stepIdx++;
+  if(state.stepIdx >= STEPS.length) finish();
+  else if(state.mode === 'auto') scheduleAuto();
+}
+
+function applyStep(i){
+  const s = STEPS[i];
+
+  // progress bar
+  for(let j=0; j<STEPS.length; j++){
+    const p = document.getElementById('ps-'+j);
+    p.className = 'progress-step' + (j<i?' done':j===i?' current':'');
+  }
+  document.getElementById('prog-name').textContent = s.name;
+  document.getElementById('prog-desc').textContent = s.desc;
+  document.getElementById('prog-num').textContent = `${i+1} / ${STEPS.length}`;
+
+  // clear all box highlights
+  document.querySelectorAll('.hw-box').forEach(b => b.className='hw-box');
+
+  // highlight target box
+  const box = document.getElementById(s.box);
+  if(box){ box.classList.add(s.hl); box.classList.add('flash-anim'); setTimeout(()=>box.classList.remove('flash-anim'),400); }
+
+  // highlight arrow
+  ['arr1','arr1b','arr2','arr2b','arr3','arr3b'].forEach(a => {
+    const el = document.getElementById(a);
+    if(el){ el.className = el.className.replace(' active','').replace(' done',''); }
+  });
+  if(s.arr){
+    const el = document.getElementById(s.arr);
+    const elb = document.getElementById(s.arr+'b');
+    if(el){ el.classList.add('active'); }
+    if(elb){ elb.classList.add('active'); }
+  }
+
+  const irq = state.activeIRQ;
+  const r = state.regs;
+
+  switch(s.id){
+
+    case 'device':
+      document.getElementById('dev-name').textContent = irq.dev;
+      document.getElementById('dev-sub').textContent = irq.desc;
+      log(`${irq.dev} completes I/O operation — informs device driver`, 'l-irq');
+      break;
+
+    case 'bus':
+      document.getElementById('bus-sub').textContent = `Signal asserted on interrupt-request line`;
+      document.getElementById('bus-val').textContent = irq.name;
+      document.getElementById('bus-val').style.color = 'var(--warn)';
+      log(`Signal sent to CPU by way of the system bus`, 'l-irq');
+      break;
+
+    case 'pic':
+      document.getElementById('pic-sub').textContent = `Interrupt-request line asserted — CPU will sense after current instruction`;
+      document.getElementById('pic-val').textContent = `address ${irq.vec}`;
+      document.getElementById('pic-val').style.color = 'var(--warn)';
+      log(`CPU senses interrupt-request line — interrupt number ${irq.vec} read`, 'l-irq');
+      break;
+
+    case 'cpuack':
+      document.getElementById('cpu-sub').textContent = `CPU stops what it is doing — transfers execution to fixed location`;
+      log(`CPU stops execution at address 0x${r.eip.toString(16)} — transfers to starting address of service routine`, 'l-cpu');
+      state.totalCycles += irq.latency || 4;
+      document.getElementById('cycle-count').textContent = state.totalCycles + ' deferred';
+      document.getElementById('stat-cycles').textContent = state.totalCycles;
+      break;
+
+    case 'pushctx':
+      state.savedCtx = {...r};
+      const savedEfl = r.efl & ~0x200;
+      r.efl = savedEfl;
+      r.esp -= 12;
+      pushStack(`0x${state.savedCtx.efl.toString(16).toUpperCase()}`, 'processor state');
+      pushStack(`0xFFFF`, 'return segment');
+      pushStack(`0x${state.savedCtx.eip.toString(16).toUpperCase()}`, 'return address');
+      document.getElementById('ctx-sub').textContent = 'State information saved — can be restored after servicing';
+      updateRegs('saved');
+      setFlag('IF','0','off');
+      log(`State information saved — return address 0x${state.savedCtx.eip.toString(16)} stored`, 'l-cpu');
+      log(`Interrupt enable cleared — CPU will not accept further interrupts`, 'l-cpu');
+      break;
+
+    case 'idt':
+      highlightIDT(irq.n);
+      document.getElementById('box-idt').classList.add('hl-blue');
+      log(`Interrupt number ${irq.vec} used as index into interrupt vector — address of service routine found`, 'l-sys');
+      break;
+
+    case 'isr':
+      document.getElementById('isr-name').textContent = `${irq.handler}`;
+      document.getElementById('isr-sub').textContent = `Service routine executes — handling ${irq.name}`;
+      r.eip = irq.vec;
+      r.eax = 0x0001;
+      updateRegs();
+      document.getElementById('cpu-sub').textContent = `Service routine executing`;
+      runISRSteps();
+      log(`Execution transferred to service routine — handler determines cause of interrupt`, 'l-isr');
+      break;
+
+    case 'eoi':
+      document.getElementById('pic-sub').textContent = 'Interrupt cleared — device serviced';
+      document.getElementById('pic-val').textContent = 'cleared';
+      document.getElementById('pic-val').style.color = 'var(--ok)';
+      log(`Handler clears the interrupt by servicing the device — device driver gives control to OS`, 'l-isr');
+      break;
+
+    case 'iret':
+      r.eip = state.savedCtx.eip;
+      r.esp = state.savedCtx.esp;
+      r.efl = state.savedCtx.efl;
+      state.stack = [];
+      renderStack();
+      document.getElementById('stack-mini').innerHTML = '';
+      document.getElementById('ctx-sub').textContent = 'State information restored';
+      document.getElementById('iret-sub').textContent = `Saved return address loaded into program counter — computation resumes`;
+      document.getElementById('iret-val').textContent = `resumes at 0x${r.eip.toString(16).toUpperCase()}`;
+      document.getElementById('iret-val').style.color = 'var(--ok)';
+      document.getElementById('cpu-sub').textContent = 'Interrupted computation resumes as though interrupt had not occurred';
+      updateRegs('restored');
+      setFlag('IF','1','on');
+      log(`Saved return address loaded into program counter — interrupted computation resumes`, 'l-cpu');
+      break;
+  }
+}
+
+function finish(){
+  stopAuto();
+  state.running = false;
+  document.querySelectorAll('.hw-box').forEach(b => b.className='hw-box');
+
+  for(let j=0;j<STEPS.length;j++) document.getElementById('ps-'+j).className='progress-step done';
+  document.getElementById('prog-name').textContent = 'Complete';
+  document.getElementById('prog-desc').textContent = `${state.activeIRQ.name} — interrupted computation resumes as though interrupt had not occurred`;
+  document.getElementById('prog-num').textContent = `✓`;
+
+  const row = document.getElementById('irqi-'+state.activeIRQ.n);
+  if(row){ row.classList.remove('active-irq'); row.classList.add('done-irq'); }
+
+  document.getElementById('stat-total').textContent = state.totalInts;
+  document.getElementById('left-badge').textContent = 'DONE';
+  document.getElementById('left-badge').className = 'pane-badge ok';
+  document.getElementById('center-badge').textContent = 'COMPLETE';
+  setInfoCard(`<strong>${state.activeIRQ.name} handled.</strong> Service routine executed. Interrupted computation resumed. ${state.totalInts} interrupt${state.totalInts!==1?'s':''} total.`, 'ok');
+  setCPUState('IDLE','');
+  log(`── ${state.activeIRQ.name} — service routine complete, computation resumed ──`, 'l-sys');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ISR STEPS ANIMATION
+// ─────────────────────────────────────────────────────────────────────────────
+function buildISRSteps(irq){
+  const steps = getISRSteps(irq);
+  const el = document.getElementById('isr-steps');
+  el.innerHTML = '';
+  steps.forEach((s,i) => {
+    const d = document.createElement('div');
+    d.className = 'isr-step';
+    d.id = 'isr-s-'+i;
+    d.innerHTML = `<span class="isr-step-num">${i+1}.</span>${s}`;
+    el.appendChild(d);
+  });
+}
+
+function runISRSteps(){
+  const steps = document.querySelectorAll('.isr-step');
+  steps.forEach((s,i) => {
+    setTimeout(() => {
+      s.classList.add('running');
+      setTimeout(() => { s.classList.remove('running'); s.classList.add('done'); }, state.speed*0.5);
+    }, i * (state.speed * 0.35));
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTO MODE
+// ─────────────────────────────────────────────────────────────────────────────
+function scheduleAuto(){
+  stopAuto();
+  if(state.stepIdx >= STEPS.length) return;
+  state.autoTimer = setTimeout(() => {
+    applyStep(state.stepIdx);
+    state.stepIdx++;
+    if(state.stepIdx >= STEPS.length) finish();
+    else scheduleAuto();
+  }, state.speed);
+}
+function stopAuto(){ if(state.autoTimer){ clearTimeout(state.autoTimer); state.autoTimer=null; } }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function updateRegs(mode){
+  const r = state.regs;
+  ['eip','esp','eax','efl'].forEach(k => {
+    document.getElementById('rv-'+k).textContent = '0x'+r[k].toString(16).toUpperCase().padStart(4,'0');
+    const cell = document.getElementById('r-'+k);
+    cell.className = 'reg-cell' + (mode?' '+mode:'');
+  });
+}
+
+function setFlag(name, val, cls){
+  const el = document.getElementById('flag-'+name);
+  el.querySelector('.fv').textContent = val;
+  el.className = 'flag-cell '+cls;
+}
+
+function highlightIDT(n){
+  document.querySelectorAll('.idt-mini tr').forEach(r => r.classList.remove('idt-hi'));
+  const row = document.getElementById('idt-'+n);
+  if(row) row.classList.add('idt-hi');
+}
+
+function pushStack(val, label){
+  const addr = 0xFFF8 - state.stack.length*4;
+  state.stack.push({addr, val, label});
+  renderStack();
+  // mini stack in box
+  const mini = document.getElementById('stack-mini');
+  const d = document.createElement('div');
+  d.className = 'stack-mini-item pushed';
+  d.innerHTML = `<span>${label}</span><span>${val}</span>`;
+  mini.insertBefore(d, mini.firstChild);
+}
+
+function renderStack(){
+  const el = document.getElementById('stack-list');
+  el.innerHTML = '';
+  [...state.stack].reverse().forEach((f,i) => {
+    const d = document.createElement('div');
+    d.className = 'stack-frame'+(i===0?' top':' old');
+    d.innerHTML = `<span class="sf-addr">0x${f.addr.toString(16).toUpperCase()}</span><span class="sf-label">${f.label}</span><span class="sf-val">${f.val}</span>`;
+    el.appendChild(d);
+  });
+}
+
+function setInfoCard(html, cls){
+  const el = document.getElementById('info-card');
+  el.className = 'info-card'+(cls?' '+cls:'');
+  el.querySelector('p').innerHTML = html;
+}
+
+function setCPUState(txt, dotCls){
+  document.getElementById('cpu-state-txt').textContent = txt;
+  document.getElementById('cpu-dot').className = 'cpu-dot'+(dotCls?' '+dotCls:'');
+  document.getElementById('center-badge').textContent = txt;
+}
+
+function resetVisuals(){
+  document.querySelectorAll('.hw-box').forEach(b => b.className='hw-box');
+  ['arr1','arr1b','arr2','arr2b','arr3','arr3b'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.className = el.className.replace(' active','').replace(' done','');
+  });
+  document.getElementById('dev-name').textContent = '— Idle —';
+  document.getElementById('dev-sub').textContent = 'No event pending';
+  document.getElementById('bus-sub').textContent = 'No signal asserted';
+  document.getElementById('bus-val').textContent = '—';
+  document.getElementById('bus-val').style.color = 'var(--a)';
+  document.getElementById('pic-sub').textContent = 'Idle — no pending IRQ';
+  document.getElementById('pic-val').textContent = '—';
+  document.getElementById('pic-val').style.color = 'var(--a)';
+  document.getElementById('cpu-sub').textContent = 'Executing interrupted computation';
+  document.getElementById('ctx-sub').textContent = 'State information not yet saved';
+  document.getElementById('isr-name').textContent = 'Interrupt Handler';
+  document.getElementById('isr-sub').textContent = 'Waiting for interrupt…';
+  document.getElementById('isr-steps').innerHTML = '';
+  document.getElementById('iret-sub').textContent = 'Saved return address not yet loaded into program counter';
+  document.getElementById('iret-val').textContent = '—';
+  document.getElementById('iret-val').style.color = 'var(--a)';
+  document.getElementById('stack-mini').innerHTML = '';
+  document.querySelectorAll('.idt-mini tr').forEach(r => r.classList.remove('idt-hi'));
+  document.querySelectorAll('.irq-item').forEach(r => r.classList.remove('active-irq'));
+  buildProgressBar();
+  document.getElementById('prog-name').textContent = 'Ready';
+  document.getElementById('prog-desc').textContent = 'Select a device controller to begin the interrupt cycle';
+  document.getElementById('prog-num').textContent = '—';
+  state.regs = {eip:0x0042,esp:0xFFF8,eax:0x0000,efl:0x0202};
+  updateRegs();
+  setFlag('IF','1','on');
+  setFlag('TF','0','');
+  setFlag('NT','0','');
+}
+
+function hardReset(){
+  stopAuto();
+  resetVisuals();
+  state.activeIRQ = null; state.stepIdx = -1; state.running = false;
+  state.savedCtx = null; state.stack = [];
+  state.totalInts = 0; state.totalCycles = 0;
+  document.getElementById('stat-total').textContent = '0';
+  document.getElementById('stat-cycles').textContent = '0';
+  document.getElementById('cycle-count').textContent = '0 deferred';
+  document.getElementById('stack-list').innerHTML = '';
+  document.querySelectorAll('.irq-item').forEach(r => r.classList.remove('done-irq','active-irq'));
+  document.getElementById('left-badge').textContent = 'IDLE';
+  document.getElementById('left-badge').className = 'pane-badge';
+  document.getElementById('center-badge').textContent = 'WAITING';
+  setCPUState('IDLE','');
+  setInfoCard('Click a <strong>device controller</strong> to trigger an interrupt. The CPU will stop what it is doing and transfer execution to the <strong>interrupt service routine</strong>.','');
+  log('── Reset ──', 'l-sys');
+}
+
+// LOG
+function log(msg, cls){
+  state.logCount++;
+  document.getElementById('right-badge').textContent = state.logCount+' EVENTS';
+  const ts = new Date();
+  const t = `${ts.getMinutes().toString().padStart(2,'0')}:${ts.getSeconds().toString().padStart(2,'0')}.${Math.floor(ts.getMilliseconds()/10).toString().padStart(2,'0')}`;
+  const el = document.createElement('div');
+  el.className = 'log-entry '+(cls||'');
+  el.innerHTML = `<span class="log-ts">${t}</span>${msg}`;
+  const list = document.getElementById('log-list');
+  list.insertBefore(el, list.firstChild);
+  while(list.children.length > 80) list.removeChild(list.lastChild);
+}
+function clearLog(){ document.getElementById('log-list').innerHTML=''; state.logCount=0; document.getElementById('right-badge').textContent='0 EVENTS'; }
+
+// SETTINGS
+function setMode(m){
+  state.mode = m;
+  document.getElementById('mode-step').className = 'mode-btn'+(m==='step'?' on':'');
+  document.getElementById('mode-auto').className = 'mode-btn'+(m==='auto'?' on':'');
+  stopAuto();
+  if(m==='auto' && state.running && state.stepIdx>=0 && state.stepIdx<STEPS.length) scheduleAuto();
+}
+function updateSpeed(v){ state.speed=parseInt(v); document.getElementById('speed-lbl').textContent=(state.speed/1000).toFixed(1)+'s'; }
+
+// KEYBOARD
+document.addEventListener('keydown', e => {
+  if(e.target.matches('input,textarea')) return;
+  if(e.code==='Space'){ e.preventDefault(); doStep(); }
+  if(e.code==='KeyR'){ hardReset(); }
+  if(e.code==='KeyF'){ fireRandom(); }
+  if(e.code==='KeyA'){ setMode(state.mode==='step'?'auto':'step'); }
+});
+
+init();
+</script>
+</body>
+</html>
