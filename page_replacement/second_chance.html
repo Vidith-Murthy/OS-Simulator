@@ -1,450 +1,189 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PAGE REPLACEMENT ALGORITHM</title>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
-    <script src="disk.js"></script>
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-        :root {
-            --color-teal: #3AAFA9;
-            --color-mint: #B2EBE0;
-            --color-cream: #FDFAF6;
-            --color-amber: #FF9F1C;
-            --color-dark: #2B4141;
-            --color-light: #F7F7F7;
-            --shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-            --transition: all 0.3s ease;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: var(--color-cream);
-            color: var(--color-dark);
-            font-family: 'Poppins', sans-serif;
-            line-height: 1.6;
-        }
-
-        nav {
-            background: linear-gradient(135deg, var(--color-teal), #2E8B99);
-            padding: 15px 5%;
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            color: white;
-            font-size: 24px;
-            font-weight: 700;
-            text-decoration: none;
-            letter-spacing: 1px;
-            display: flex;
-            align-items: center;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-        }
-        
-        .logo:before {
-            content: "\f233";
-            font-family: "Font Awesome 5 Free";
-            margin-right: 10px;
-            font-weight: 900;
-        }
-        
-        .logo:hover {
-            color: white;
-            text-decoration: none;
-            transform: scale(1.05);
-            transition: var(--transition);
-        }
-
-        nav ul {
-            list-style: none;
-            display: flex;
-            margin: 0;
-        }
-
-        nav li {
-            margin: 0 10px;
-        }
-
-        .button {
-            background-color: var(--color-teal);
-            color: white;
-            border: none;
-            padding: 10px 18px;
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            border-radius: 8px;
-            transition: var(--transition);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-
-        .button:hover {
-            background-color: var(--color-amber);
-            transform: translateY(-3px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        .button:active {
-            transform: translateY(1px);
-        }
-
-        .dropdown {
-            position: relative;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            min-width: 230px;
-            background: white;
-            box-shadow: var(--shadow);
-            border-radius: 8px;
-            z-index: 1000;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            margin-top: 10px;
-            overflow: hidden;
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-            opacity: 1;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateX(-50%) translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(-50%) translateY(0);
-            }
-        }
-
-        .dropdown-content a {
-            color: var(--color-dark);
-            padding: 12px 20px;
-            text-decoration: none;
-            display: block;
-            transition: var(--transition);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            font-weight: 500;
-        }
-
-        .dropdown-content a:last-child {
-            border-bottom: none;
-        }
-
-        .dropdown-content a:hover {
-            background: var(--color-mint);
-            color: var(--color-dark);
-            padding-left: 25px;
-        }
-        .dropdown::after{
-            content: '';
-            position: absolute;
-            height: 13px;
-            width: 100%;
-            bottom: -10px;
-            left: 0;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 50px 20px;
-        }
-
-        h1 {
-            color: var(--color-dark);
-            font-size: 2.6rem;
-            margin-bottom: 30px;
-            font-weight: 700;
-            text-align: center;
-            position: relative;
-            padding-bottom: 15px;
-        }
-
-        h1:after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100px;
-            height: 4px;
-            background: linear-gradient(90deg, var(--color-teal), var(--color-mint));
-            border-radius: 2px;
-        }
-
-        .content {
-            align-items: stretch;
-            justify-content: space-between;
-            gap: 40px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            margin-top: 40px;
-        }
-
-        .image-container {
-            flex: 1;
-            position: relative;
-            min-height: 100%;
-            background-color: var(--color-teal);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 30px;
-        }
-
-        .image-container img {
-            width: 100%;
-            max-width: 350px;
-            border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-
-        .image-container img:hover {
-            transform: scale(1.05);
-        }
-
-        .text-container {
-            flex: 1.5;
-            padding: 40px;
-            text-align: left;
-        }
-
-        p {
-            margin-bottom: 20px;
-            font-size: 17px;
-            line-height: 1.7;
-        }
-
-        b {
-            color: var(--color-teal);
-            font-weight: 600;
-        }
-
-        h3 {
-            color: var(--color-teal);
-            margin-top: 25px;
-            margin-bottom: 15px;
-            font-weight: 600;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-        }
-
-        h3:before {
-            content: "";
-            display: inline-block;
-            width: 15px;
-            height: 15px;
-            background-color: var(--color-amber);
-            margin-right: 12px;
-            border-radius: 50%;
-        }
-
-        .bullet-points {
-            list-style: none;
-            padding-left: 15px;
-            margin-bottom: 25px;
-        }
-
-        .bullet-points li {
-            position: relative;
-            padding-left: 25px;
-            margin-bottom: 12px;
-            font-size: 16px;
-        }
-
-        .bullet-points li:before {
-            content: "\f105";
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            position: absolute;
-            left: 0;
-            color: var(--color-amber);
-        }
-
-        .sim-button {
-            margin-top: 20px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, var(--color-teal), #2E8B99);
-            border: none;
-            color: white;
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 16px;
-            cursor: pointer;
-            transition: var(--transition);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .sim-button:before {
-            content: "\f04b";
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            margin-right: 10px;
-        }
-
-        .sim-button:hover {
-            background: linear-gradient(135deg, var(--color-amber), #F57C00);
-            transform: translateY(-3px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
-        }
-
-        .info-card {
-            width: 100%;
-            background-color: var(--color-light);
-            border-left: 4px solid var(--color-teal);
-            padding: 15px;
-            border-radius: 6px;
-        }
-        .image-text-flex {
-            display: flex;
-            align-items: center;
-            padding: 25px;
-        }
-
-        .image-text-flex .image-container {
-            flex: 1;
-            padding: 25px;
-            background-color: transparent;
-            justify-content: flex-start;
-        }
-
-        .image-container img {
-            max-width: 100%;
-        }
-
-        .image-text-flex .info-card {
-            flex: 1;
-            margin: 0;
-        }
-
-
-        @media (max-width: 768px) {
-            .content {
-                flex-direction: column;
-            }
-            
-            .image-container {
-                padding: 20px;
-                min-height: 200px;
-            }
-            
-            .text-container {
-                padding: 30px 20px;
-            }
-            
-            h1 {
-                font-size: 2rem;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Second Chance (Clock) Page Replacement | OS VISUALIZER</title>
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-void:#0a0a0a; --bg-deep:#111111; --bg-surface:#161616;
+      --bg-card:rgba(22,22,22,0.85);
+      --red:#e03030; --red-dim:rgba(224,48,48,0.45); --red-faint:rgba(224,48,48,0.08);
+      --text-primary:#e8e8e8; --text-secondary:#c06060; --text-muted:#5a2020;
+      --border-subtle:rgba(224,48,48,0.1); --border-hover:rgba(224,48,48,0.4);
+      --transition:all 0.3s cubic-bezier(0.4,0,0.2,1);
+      --font-display:'Syne',sans-serif; --font-mono:'Space Mono',monospace;
+    }
+    *{margin:0;padding:0;box-sizing:border-box} html{scroll-behavior:smooth}
+    body{background-color:var(--bg-void);color:var(--text-primary);font-family:var(--font-display);line-height:1.6;overflow-x:hidden}
+    ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-track{background:var(--bg-deep)} ::-webkit-scrollbar-thumb{background:var(--red);border-radius:2px}
+    #particles-js{position:fixed;width:100%;height:100%;top:0;left:0;z-index:0}
+    body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:1;opacity:0.6}
+    body::after{content:'';position:fixed;top:0;left:0;right:0;height:300px;background:linear-gradient(to bottom,rgba(224,48,48,0.03),transparent);pointer-events:none;z-index:1}
+    .loader-wrapper{position:fixed;inset:0;background:var(--bg-void);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;transition:opacity 0.8s ease,visibility 0.8s ease;gap:20px}
+    .loader-text{font-family:var(--font-mono);font-size:11px;color:var(--red);letter-spacing:4px;text-transform:uppercase;animation:blink 1s step-end infinite}
+    @keyframes blink{50%{opacity:0}}
+    .loader{width:48px;height:48px;position:relative}
+    .loader::before,.loader::after{content:'';position:absolute;border-radius:50%}
+    .loader::before{inset:0;border:1px solid transparent;border-top-color:var(--red);animation:spin 1s linear infinite}
+    .loader::after{inset:10px;border:1px solid transparent;border-bottom-color:var(--text-muted);animation:spin 0.7s linear infinite reverse}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    nav{position:fixed;top:0;width:100%;z-index:1000;padding:16px 5%;display:flex;justify-content:space-between;align-items:center;transition:var(--transition);border-bottom:1px solid transparent}
+    nav.scrolled{background:rgba(10,10,10,0.9);backdrop-filter:blur(20px);border-bottom-color:var(--border-subtle);padding:10px 5%}
+    .logo{color:var(--text-primary);font-family:var(--font-mono);font-size:18px;font-weight:700;text-decoration:none;letter-spacing:3px;display:flex;align-items:center;gap:10px}
+    .logo::before{content:"\f233";font-family:"Font Awesome 5 Free";font-weight:900;color:var(--text-primary);font-size:18px}
+    .logo:hover{text-decoration:none}
+    nav ul{list-style:none;display:flex;margin:0;gap:8px}
+    .button{background:transparent;color:var(--text-secondary);border:1px solid var(--border-subtle);padding:9px 18px;font-size:13px;font-family:var(--font-display);font-weight:600;letter-spacing:0.5px;cursor:pointer;border-radius:6px;transition:var(--transition);position:relative;overflow:hidden;white-space:nowrap}
+    .button i{margin-right:6px}
+    .button::before{content:'';position:absolute;inset:0;background:var(--red-faint);opacity:0;transition:opacity 0.3s}
+    .button:hover{color:var(--red);border-color:var(--red-dim)} .button:hover::before{opacity:1}
+    .dropdown{position:relative} .dropdown::after{content:'';position:absolute;height:14px;width:100%;bottom:-12px;left:0}
+    .dropdown-content{display:none;position:absolute;min-width:250px;background:rgba(14,14,14,0.97);backdrop-filter:blur(20px);border:1px solid var(--border-subtle);border-radius:10px;z-index:1000;top:calc(100% + 14px);left:50%;transform:translateX(-50%);opacity:0;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.7)}
+    .dropdown:hover .dropdown-content{display:block;opacity:1;animation:dropIn 0.25s cubic-bezier(0.4,0,0.2,1)}
+    @keyframes dropIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+    .dropdown-content a{color:var(--text-secondary);padding:11px 18px;text-decoration:none;display:flex;align-items:center;gap:10px;transition:var(--transition);border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:500}
+    .dropdown-content a:last-child{border-bottom:none} .dropdown-content a i{width:16px;color:var(--text-secondary);opacity:0.7;transition:var(--transition)}
+    .dropdown-content a:hover{background:var(--red-faint);color:var(--red);padding-left:22px} .dropdown-content a:hover i{opacity:1}
+    .container{max-width:1100px;margin:0 auto;padding:140px 24px 60px;position:relative;z-index:2}
+    .breadcrumb-nav{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-bottom:48px}
+    .breadcrumb-nav a{color:var(--text-secondary);text-decoration:none;transition:color 0.2s} .breadcrumb-nav a:hover{color:var(--red)} .breadcrumb-nav .sep{color:var(--text-muted)}
+    /* Page header */
+    .page-header{margin-bottom:48px}
+    .page-tag{display:inline-flex;align-items:center;gap:8px;background:var(--red-faint);border:1px solid var(--border-subtle);border-radius:100px;padding:6px 16px;font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);letter-spacing:2px;margin-bottom:24px}
+    .page-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 2s ease infinite}
+    @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.4;transform:scale(0.8)}}
+    h1{font-family:var(--font-display);font-weight:800;font-size:clamp(2rem,4vw,3.2rem);line-height:1.1;letter-spacing:-1px;margin-bottom:16px;color:var(--text-primary)}
+    h1 .highlight{color:var(--red)}
+    .page-subtitle{font-size:1rem;color:var(--text-secondary);line-height:1.8;max-width:700px}
+    /* Content card */
+    .content-card{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;padding:36px;margin-bottom:24px;backdrop-filter:blur(10px);position:relative;overflow:hidden}
+    .content-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--red-dim),transparent)}
+    .content-card h2{font-family:var(--font-display);font-weight:700;font-size:1.2rem;color:var(--text-primary);margin-bottom:16px;letter-spacing:-0.3px;display:flex;align-items:center;gap:10px}
+    .content-card h2 i{color:var(--red);font-size:1rem}
+    .content-card p{font-size:0.9rem;color:var(--text-secondary);line-height:1.9;margin-bottom:0}
+    /* Two col */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:24px}
+    /* List inside card */
+    .pros-cons-list{list-style:none;padding:0;margin:0}
+    .pros-cons-list li{font-size:0.85rem;color:var(--text-secondary);padding:8px 0;border-bottom:1px solid var(--border-subtle);display:flex;align-items:flex-start;gap:10px;line-height:1.6}
+    .pros-cons-list li:last-child{border-bottom:none}
+    .pros-cons-list li i{margin-top:3px;flex-shrink:0}
+    .pros-cons-list li i.fa-check{color:#4caf50} .pros-cons-list li i.fa-times{color:var(--red)}
+    /* Simulate button */
+    .simulate-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 28px;background:var(--red-faint);color:var(--red);text-decoration:none;border:1px solid var(--red-dim);border-radius:8px;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:var(--transition);margin-right:12px;margin-bottom:12px}
+    .simulate-btn:hover{background:var(--red);color:white;text-decoration:none;transform:translateY(-2px);box-shadow:0 8px 24px rgba(224,48,48,0.3)}
+    .back-btn{display:inline-flex;align-items:center;gap:10px;padding:14px 28px;background:transparent;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border-subtle);border-radius:8px;font-family:var(--font-mono);font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:var(--transition);margin-bottom:12px}
+    .back-btn:hover{color:var(--red);border-color:var(--red-dim);text-decoration:none}
+    /* Image illustration */
+    .algo-img{width:100%;border-radius:10px;border:1px solid var(--border-subtle);opacity:0.85;transition:opacity 0.3s;display:block;margin-bottom:24px}
+    .algo-img:hover{opacity:1}
+    /* nav siblings */
+    .sibling-nav{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:48px}
+    .sibling-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;background:transparent;color:var(--text-secondary);text-decoration:none;border:1px solid var(--border-subtle);border-radius:6px;font-family:var(--font-mono);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;transition:var(--transition)}
+    .sibling-btn:hover{color:var(--red);border-color:var(--red-dim);text-decoration:none} .sibling-btn.active{color:var(--red);border-color:var(--red-dim);background:var(--red-faint)}
+    .back-to-top{position:fixed;bottom:32px;right:32px;width:42px;height:42px;border-radius:8px;background:var(--bg-surface);border:1px solid var(--border-subtle);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:0;visibility:hidden;transition:var(--transition);z-index:999}
+    .back-to-top.visible{opacity:1;visibility:visible} .back-to-top:hover{border-color:var(--red-dim);color:var(--red);transform:translateY(-3px)}
+    footer{background:transparent;border-top:1px solid var(--border-subtle);color:var(--text-muted);text-align:center;padding:40px 0;margin-top:80px;position:relative;z-index:2}
+    .footer-content{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:16px}
+    .footer-brand{font-family:var(--font-mono);font-size:12px;letter-spacing:3px;color:var(--text-secondary)}
+    .social-links{display:flex;gap:12px}
+    .social-links a{width:38px;height:38px;border-radius:8px;background:var(--bg-surface);border:1px solid var(--border-subtle);color:var(--text-secondary);display:flex;align-items:center;justify-content:center;transition:var(--transition);text-decoration:none}
+    .social-links a:hover{border-color:var(--red-dim);color:var(--red);background:var(--red-faint)}
+    footer p{font-size:12px;color:var(--text-muted);font-family:var(--font-mono)}
+    @media(max-width:768px){.two-col{grid-template-columns:1fr} h1{font-size:1.8rem}}
+</style>
 </head>
 <body>
-    <nav>
-        <a class="logo" href="../index.html">OS VISUALIZER</a>
-        <ul>
-            <li><button onclick="location.href = '../index.html';" class="button"><i class="fas fa-home"></i> Home</button></li>
-            <li class="dropdown">
-                <button class="button"><i class="fas fa-code-branch"></i> Algorithms</button>
-                <div class="dropdown-content">
-                    <a href="../process_scheduling/process.html"><i class="fas fa-tasks"></i> Process Scheduling</a>
-                    <a href="../process_sync/home.html"><i class="fas fa-sync"></i> Process Synchronization</a>
-                    <a href="../Bankers/bankers.html"><i class="fas fa-university"></i> Bankers Algorithm</a>
-                    <a href="../mft_mvt/Fit.html"><i class="fas fa-puzzle-piece"></i> Fit Algorithms</a>
-                    <a href="../page_replacement/page_replacement_home.html"><i class="fas fa-exchange-alt"></i> Page Replacement</a>
-                    <a href="../Disk/disk.html"><i class="fas fa-hdd"></i> Disk Scheduling</a>
-                    <a href="../file_allocation/file.html"><i class="fas fa-folder"></i> File Allocation</a>
-                    <a href="../mft_mvt/MVFT.html"><i class="fas fa-memory"></i> MFT and MVT</a>
-                </div>
-            </li>
-            <li><button class="button" onclick="location.href = '../about.html';"><i class="fas fa-info-circle"></i> About</button></li>
-            <li><button class="button" onclick="location.href = '../references.html';"><i class="fas fa-book"></i> References</button></li>
-        </ul>
-    </nav>
-    
-    <div class="container">
-        <h1>Second Chance (Clock) Page Replacement</h1>
+<div class="loader-wrapper"><div class="loader"></div><div class="loader-text">LOADING MODULE_</div></div>
+<div id="particles-js"></div>
 
-        <div class="content">
-            <div class="image-text-flex">
-            <div class="image-container">
-                <img src="images/second_chance.jpg" alt="Second chance Page Replacement Illustration">
-            </div>
-            
-                <div class="info-card">
-                    <p>
-                        The Second Chance algorithm (also known as the Clock algorithm) is an enhancement of the FIFO page replacement strategy that takes page usage into account. It gives pages that have been recently accessed a "second chance" before being replaced, improving performance over basic FIFO.
-                    </p>
-                </div>
-            </div>
-                <div class="text-container">
-                <h3>How It Works</h3>
-                <p>
-                    Second Chance maintains a circular queue of pages (like the face of a clock) with a pointer to the oldest page. Each page has a reference bit (initially set to 0) that is set to 1 when the page is accessed. When a page fault occurs:
-                    <li>The algorithm examines the reference bit of the oldest page (where the pointer points)</li>
-                    <li>If the reference bit is 0, the page is replaced</li>
-                    <li>If the reference bit is 1, the algorithm gives the page a "second chance" by setting its reference bit to 0 and moving to the next page</li>
-                    <li>This process continues until a page with a reference bit of 0 is found</li>
-                    <li>The pointer moves in a circular manner around the queue, resembling the motion of a clock hand, which is why it's also called the Clock algorithm.</li>
-                </p>
+<nav>
+  <a class="logo" href="../index.html"><span>OS VISUALIZER</span></a>
+  
+</nav>
 
-                <h3>Advantages</h3>
-                <ul class="bullet-points">
-                    <li>Provides better performance than pure FIFO by considering page usage</li>
-                    <li>Relatively simple to implement with only minimal overhead beyond FIFO</li>
-                    <li>Prevents frequently used pages from being replaced too soon</li>
-                    <li>More efficient than LRU but with less overhead</li>
-                    <li>Does not require sorting or complex data structures</li>
-                </ul>
+<div class="container">
+  <div class="breadcrumb-nav">
+    <a href="../index.html">Home</a><span class="sep">/</span>
+    <a href="page_replacement_home.html">Page Replacement</a><span class="sep">/</span>
+    <span>Second-Chance (Clock)</span>
+  </div>
+  <div class="sibling-nav">
+  <a href="demand.html" class="sibling-btn">Demand Paging</a>
+  <a href="fifo.html" class="sibling-btn">FIFO</a>
+  <a href="optimal.html" class="sibling-btn">Optimal</a>
+  <a href="lru.html" class="sibling-btn">LRU</a>
+  <a href="mru.html" class="sibling-btn">MRU</a>
+  <a href="lfu.html" class="sibling-btn">LFU</a>
+  <a href="random.html" class="sibling-btn">Random</a>
+  <a href="second_chance.html" class="sibling-btn active">Second-Chance</a>
+  <a href="mfu.html" class="sibling-btn">MFU</a>
+</div>
 
-                <h3>Disadvantages</h3>
-                <ul class="bullet-points">
-                    <li>Still partially based on FIFO, so it can suffer from some of the same issues</li>
-                    <li>Only considers whether a page has been used, not how frequently or recently</li>
-                    <li>May still be <b>susceptible to Belady's Anomaly</b> in some cases</li>
-                    <li>Less effective than more complex algorithms like LRU for certain workloads</li>
-                    <li>Requires hardware support for reference bits to be most effective</li>
-                </ul>
-                <button class="sim-button" onclick="location.href='page_replacement.html';">Try Second Chance Simulation</button>
-            </div>
-        </div>
+  <div class="page-header">
+    <div class="page-tag">Page Replacement · Clock</div>
+    <h1>Second-Chance <span class="highlight">(Clock)</span></h1>
+    <p class="page-subtitle">An enhanced FIFO that gives recently accessed pages a second chance via a reference bit — also known as the Clock algorithm.</p>
+  </div>
+
+  <img src="images/second_chance.jpg" alt="Second Chance (Clock) Page Replacement Illustration" class="algo-img" onerror="this.style.display='none'">
+
+  <div class="content-card">
+    <h2><i class="fas fa-cogs"></i> How It Works</h2>
+    <p>Second Chance maintains a circular queue (like a clock face) with a pointer to the oldest page. Each page has a reference bit set to 1 when accessed. When a page fault occurs: if the pointer's page has reference bit 0, it is replaced. If the bit is 1, it's cleared to 0 and the pointer advances — giving the page a 'second chance'. This repeats until a page with bit 0 is found.</p>
+  </div>
+
+  <div class="two-col">
+    <div class="content-card">
+      <h2><i class="fas fa-check-circle"></i> Advantages</h2>
+      <ul class="pros-cons-list"><li><i class="fas fa-check"></i>Better performance than pure FIFO by considering recent usage</li><li><i class="fas fa-check"></i>Simple to implement with minimal overhead beyond FIFO</li><li><i class="fas fa-check"></i>Prevents eviction of frequently-used pages</li><li><i class="fas fa-check"></i>More efficient than LRU with far less overhead</li><li><i class="fas fa-check"></i>No complex sorting or data structures required</li></ul>
     </div>
+    <div class="content-card">
+      <h2><i class="fas fa-exclamation-triangle"></i> Disadvantages</h2>
+      <ul class="pros-cons-list"><li><i class="fas fa-times"></i>Still partially FIFO-based — can inherit FIFO weaknesses</li><li><i class="fas fa-times"></i>Only considers whether a page was used, not how often or how recently</li><li><i class="fas fa-times"></i>May be susceptible to Bélády's Anomaly in edge cases</li><li><i class="fas fa-times"></i>Less effective than LRU for certain workloads</li><li><i class="fas fa-times"></i>Requires hardware support for reference bits</li></ul>
+    </div>
+  </div>
 
-    <footer style="background: var(--color-dark); color: white; text-align: center; padding: 20px 0; margin-top: 50px;">
-        <p style="margin: 0;">© 2025 OS Visualizer | Educational Tool for Operating System Concepts</p>
-    </footer>
+  
+
+  <div class="content-card">
+    <h2><i class="fas fa-play-circle"></i> Try It Yourself</h2>
+    <p style="margin-bottom:24px">Step through the algorithm interactively, enter a custom reference string, and observe page faults in real time.</p>
+    <a href="page_replacement_home.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Algorithms</a>
+  </div>
+</div>
+
+<button class="back-to-top" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fas fa-arrow-up"></i></button>
+
+<footer>
+  <div class="footer-content">
+    <div class="footer-brand">OS VISUALIZER</div>
+    <div class="social-links">
+      <a href="https://github.com/Vidith-Murthy/OS-Simulator" target="_blank"><i class="fab fa-github"></i></a>
+    </div>
+    <p>© 2025 OS Visualizer | Educational Tool for Operating System Concepts</p>
+  </div>
+</footer>
+
+<script>
+window.addEventListener('load',function(){setTimeout(function(){var lw=document.querySelector('.loader-wrapper');lw.style.opacity='0';lw.style.visibility='hidden'},1000)});
+window.addEventListener('scroll',function(){var nav=document.querySelector('nav'),btn=document.querySelector('.back-to-top');if(window.scrollY>60)nav.classList.add('scrolled');else nav.classList.remove('scrolled');if(window.scrollY>300)btn.classList.add('visible');else btn.classList.remove('visible')});
+window.particlesJS("particles-js",{"particles":{"number":{"value":30,"density":{"enable":true,"value_area":1200}},"color":{"value":"#e03030"},"shape":{"type":"circle"},"opacity":{"value":0.15,"random":true,"anim":{"enable":true,"speed":0.5,"opacity_min":0.03,"sync":false}},"size":{"value":1.5,"random":true},"line_linked":{"enable":true,"distance":180,"color":"#e03030","opacity":0.06,"width":1},"move":{"enable":true,"speed":0.4,"direction":"none","random":true,"straight":false,"out_mode":"out"}},"interactivity":{"detect_on":"canvas","events":{"onhover":{"enable":true,"mode":"repulse"},"onclick":{"enable":false},"resize":true},"modes":{"repulse":{"distance":80,"duration":0.4}}},"retina_detect":true});
+gsap.registerPlugin(ScrollTrigger);
+gsap.from('.page-tag',{opacity:0,y:20,duration:0.6,delay:1.2});
+gsap.from('h1',{opacity:0,y:30,duration:0.7,delay:1.4});
+gsap.from('.page-subtitle',{opacity:0,y:20,duration:0.6,delay:1.5});
+gsap.from('.content-card',{opacity:0,y:30,duration:0.5,stagger:0.12,delay:1.7,ease:'power2.out'});
+</script>
 </body>
 </html>
