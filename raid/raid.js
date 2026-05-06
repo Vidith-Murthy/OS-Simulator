@@ -61,10 +61,10 @@ const raidConfigs = {
     },
     raid2: {
         name: 'RAID 2 - Striping with Hamming Code',
-        description: 'Rarely used in practice. Uses bit-level striping with Hamming code error correction for detection and correction capability. Provides both error detection and correction.',
+        description: 'Rarely used in practice. Uses bit-level striping with Hamming code error correction for detection and correction capability. Data bits are distributed across data disks bit-by-bit, while Hamming code parity bits (ECC) are stored on dedicated ECC disks. This allows single-bit error correction and double-bit error detection.',
         minDisks: 3, maxDisks: 5,
-        method: 'Hamming Code',
-        hasSimulation: false,
+        method: 'Hamming Code (ECC)',
+        hasSimulation: true,
         features: [
             'Bit-level data striping',
             'Hamming code error correction',
@@ -89,10 +89,10 @@ const raidConfigs = {
     },
     raid3: {
         name: 'RAID 3 - Striping with Parity',
-        description: 'Byte-level striping with a dedicated parity disk. Provides fault tolerance with one disk failure recovery. Good for sequential data but poor for random access operations due to parity disk bottleneck.',
+        description: 'Byte-level striping with a dedicated parity disk. Each byte of data is split across all data disks simultaneously; a single dedicated parity disk stores the XOR parity of all data bytes in that stripe. Provides fault tolerance with one disk failure recovery. Good for sequential data but poor for random access operations due to parity disk bottleneck.',
         minDisks: 3, maxDisks: 5,
-        method: 'Dedicated Parity',
-        hasSimulation: false,
+        method: 'Dedicated Byte Parity',
+        hasSimulation: true,
         features: [
             'Byte-level data striping',
             'Dedicated parity disk',
@@ -117,10 +117,10 @@ const raidConfigs = {
     },
     raid4: {
         name: 'RAID 4 - Block-level Parity',
-        description: 'Block-level striping with a dedicated parity disk. Provides single disk failure recovery with better random access than RAID 3. However, the parity disk can become a bottleneck.',
+        description: 'Block-level striping with a dedicated parity disk. Full data blocks are distributed across data disks in round-robin fashion, while a single dedicated parity disk stores the XOR parity of each stripe. Provides single disk failure recovery with better random read access than RAID 3, since complete blocks reside on individual disks. However, the parity disk is a write bottleneck.',
         minDisks: 3, maxDisks: 5,
-        method: 'Block Parity',
-        hasSimulation: false,
+        method: 'Dedicated Block Parity',
+        hasSimulation: true,
         features: [
             'Block-level data striping',
             'Dedicated parity disk',
@@ -602,6 +602,398 @@ function startRaid10Animation(diskCount, dataBlockCount, animationArea) {
     });
 }
 
+// ══════════════════════════════════════════════════════
+//  RAID 2 — Bit-level striping with Hamming ECC
+// ══════════════════════════════════════════════════════
+
+// For N total disks, how many are ECC (Hamming parity) disks?
+// Hamming: need k ECC bits where 2^k >= k + dataBits + 1
+function hammingECCCount(dataDiskCount) {
+    let k = 1;
+    while (Math.pow(2, k) < k + dataDiskCount + 1) k++;
+    return k;
+}
+
+// Build RAID 2 layout:
+// dataDiskCount = diskCount - eccCount
+// Each "stripe" = one bit-group (we visualise at the byte level: 8 bit-slices)
+// Returns array of stripes; each stripe has .row = array per disk of {type, label}
+function buildRaid2Layout(diskCount, dataBlockCount) {
+    const eccCount  = hammingECCCount(diskCount - hammingECCCount(diskCount)); // iterate to stabilise
+    // Stabilise: find eccCount such that diskCount - eccCount data disks need exactly eccCount ECC disks
+    let ec = 1;
+    while (ec < diskCount) {
+        const dataDiskCount = diskCount - ec;
+        if (dataDiskCount <= 0) break;
+        const needed = hammingECCCount(dataDiskCount);
+        if (needed === ec) break;
+        ec++;
+    }
+    const dataDiskCount = diskCount - ec;
+    const stripes = [];
+
+    for (let b = 1; b <= dataBlockCount; b++) {
+        // Each block is shown as 8 bit-slices (byte-level illustration)
+        for (let bitSlice = 0; bitSlice < 8; bitSlice++) {
+            const row = [];
+            // Data disks first
+            for (let d = 0; d < dataDiskCount; d++) {
+                row.push({ type: 'data', label: `B${b}[${bitSlice}]`, block: b, bit: bitSlice, disk: d });
+            }
+            // ECC (Hamming) disks
+            for (let e = 0; e < ec; e++) {
+                row.push({ type: 'ecc', label: `H${b}[${bitSlice}]`, block: b, bit: bitSlice, eccIdx: e });
+            }
+            stripes.push({ row, block: b, bitSlice });
+        }
+    }
+    return stripes;
+}
+
+function buildRaid2BlockViz(stripes, diskCount) {
+    const container = document.getElementById('block-visualization');
+    container.innerHTML = '';
+
+    const ec = stripes[0] ? stripes[0].row.filter(c => c.type === 'ecc').length : 1;
+    const dataDiskCount = diskCount - ec;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'raid5-viz-wrapper';
+
+    // Section header row for data vs ECC disks
+    const sectionRow = document.createElement('div');
+    sectionRow.className = 'raid5-viz-row raid5-header-row';
+    const blankCell = document.createElement('div');
+    blankCell.className = 'raid5-viz-cell raid5-stripe-label';
+    blankCell.textContent = '';
+    sectionRow.appendChild(blankCell);
+
+    const dataHeader = document.createElement('div');
+    dataHeader.className = 'raid5-viz-cell raid01-set-header';
+    dataHeader.style.gridColumn = `span ${dataDiskCount}`;
+    dataHeader.textContent = `Data Disks (${dataDiskCount})`;
+    sectionRow.appendChild(dataHeader);
+
+    const eccHeader = document.createElement('div');
+    eccHeader.className = 'raid5-viz-cell raid01-set-header raid01-set-b';
+    eccHeader.style.gridColumn = `span ${ec}`;
+    eccHeader.textContent = `Hamming ECC Disks (${ec})`;
+    sectionRow.appendChild(eccHeader);
+    wrapper.appendChild(sectionRow);
+
+    // Disk header row
+    const headerRow = document.createElement('div');
+    headerRow.className = 'raid5-viz-row raid5-header-row';
+    const stripeH = document.createElement('div');
+    stripeH.className = 'raid5-viz-cell raid5-stripe-label';
+    stripeH.textContent = 'Bit-Slice';
+    headerRow.appendChild(stripeH);
+    for (let d = 0; d < diskCount; d++) {
+        const dh = document.createElement('div');
+        dh.className = 'raid5-viz-cell raid5-disk-header' + (d >= dataDiskCount ? ' raid01-mirror-header' : '');
+        dh.textContent = d < dataDiskCount ? `Disk ${d + 1}` : `ECC ${d - dataDiskCount + 1}`;
+        headerRow.appendChild(dh);
+    }
+    wrapper.appendChild(headerRow);
+
+    // Show only first block's 8 bit-slices for clarity, then a summary row
+    const blockStripes = stripes.filter(s => s.block === 1);
+    blockStripes.forEach((stripe, si) => {
+        const row = document.createElement('div');
+        row.className = 'raid5-viz-row';
+        const sl = document.createElement('div');
+        sl.className = 'raid5-viz-cell raid5-stripe-label';
+        sl.textContent = `Bit ${si}`;
+        row.appendChild(sl);
+        stripe.row.forEach((cell, di) => {
+            const c = document.createElement('div');
+            c.id = `viz-s${si}-d${di}`;
+            c.className = 'raid5-viz-cell raid5-data-cell' + (cell.type === 'ecc' ? ' raid5-parity-cell' : '');
+            c.textContent = cell.label;
+            row.appendChild(c);
+        });
+        wrapper.appendChild(row);
+    });
+
+    // If more than 1 block, show ellipsis
+    if (stripes[stripes.length - 1] && stripes[stripes.length - 1].block > 1) {
+        const moreRow = document.createElement('div');
+        moreRow.className = 'raid5-viz-row';
+        const moreCell = document.createElement('div');
+        moreCell.className = 'raid5-viz-cell raid5-stripe-label';
+        moreCell.textContent = '…';
+        moreRow.appendChild(moreCell);
+        for (let d = 0; d < diskCount; d++) {
+            const c = document.createElement('div');
+            c.className = 'raid5-viz-cell raid5-data-cell';
+            c.textContent = '…';
+            moreRow.appendChild(c);
+        }
+        wrapper.appendChild(moreRow);
+    }
+
+    container.appendChild(wrapper);
+}
+
+function startRaid2Animation(diskCount, dataBlockCount, animationArea) {
+    const stripes = buildRaid2Layout(diskCount, dataBlockCount);
+    buildRaid2BlockViz(stripes, diskCount);
+
+    // Only animate first block (8 bit-slices) for clarity
+    const firstBlockStripes = stripes.filter(s => s.block === 1);
+    let delay = 0;
+    const CELL_OFFSET = 120;
+    const SLICE_GAP   = 500;
+
+    firstBlockStripes.forEach((stripe, si) => {
+        stripe.row.forEach((cell, di) => {
+            const t = delay + di * CELL_OFFSET;
+            setTimeout(() => {
+                if (!simulationRunning) return;
+                animatePacketToDisk(cell.label, cell.label, di, animationArea, cell.type === 'ecc', si, false, false);
+                const vizCell = document.getElementById(`viz-s${si}-d${di}`);
+                if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+            }, t);
+        });
+        delay += SLICE_GAP + diskCount * CELL_OFFSET;
+    });
+}
+
+// ══════════════════════════════════════════════════════
+//  RAID 3 — Byte-level striping with dedicated parity
+// ══════════════════════════════════════════════════════
+
+// Layout: dataDiskCount = diskCount - 1; last disk = dedicated parity disk.
+// Each stripe handles one "byte stripe" across all data disks simultaneously.
+// For visualisation we show stripes of (diskCount-1) byte chunks per data block.
+function buildRaid3Layout(diskCount, dataBlockCount) {
+    const dataDiskCount = diskCount - 1; // last disk is always parity
+    const stripes = [];
+
+    for (let b = 1; b <= dataBlockCount; b++) {
+        // Each block split into dataDiskCount byte-chunks per stripe
+        const row = [];
+        for (let d = 0; d < dataDiskCount; d++) {
+            row.push({ type: 'data', label: `B${b}[${d}]`, block: b, byteSlot: d });
+        }
+        // Dedicated parity disk (last)
+        row.push({ type: 'parity', label: `P${b}`, block: b });
+        stripes.push({ row, block: b });
+    }
+    return stripes;
+}
+
+function buildRaid3BlockViz(stripes, diskCount) {
+    const container = document.getElementById('block-visualization');
+    container.innerHTML = '';
+    const dataDiskCount = diskCount - 1;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'raid5-viz-wrapper';
+
+    // Section header
+    const sectionRow = document.createElement('div');
+    sectionRow.className = 'raid5-viz-row raid5-header-row';
+    const blank = document.createElement('div');
+    blank.className = 'raid5-viz-cell raid5-stripe-label';
+    blank.textContent = '';
+    sectionRow.appendChild(blank);
+
+    const dataH = document.createElement('div');
+    dataH.className = 'raid5-viz-cell raid01-set-header';
+    dataH.style.gridColumn = `span ${dataDiskCount}`;
+    dataH.textContent = `Data Disks (${dataDiskCount})`;
+    sectionRow.appendChild(dataH);
+
+    const parH = document.createElement('div');
+    parH.className = 'raid5-viz-cell raid01-set-header raid01-set-b';
+    parH.textContent = 'Parity Disk';
+    sectionRow.appendChild(parH);
+    wrapper.appendChild(sectionRow);
+
+    // Disk headers
+    const headerRow = document.createElement('div');
+    headerRow.className = 'raid5-viz-row raid5-header-row';
+    const stripeH = document.createElement('div');
+    stripeH.className = 'raid5-viz-cell raid5-stripe-label';
+    stripeH.textContent = 'Stripe';
+    headerRow.appendChild(stripeH);
+    for (let d = 0; d < diskCount; d++) {
+        const dh = document.createElement('div');
+        dh.className = 'raid5-viz-cell raid5-disk-header' + (d === diskCount - 1 ? ' raid01-mirror-header' : '');
+        dh.textContent = d < dataDiskCount ? `Disk ${d + 1}` : 'Parity';
+        headerRow.appendChild(dh);
+    }
+    wrapper.appendChild(headerRow);
+
+    stripes.forEach((stripe, si) => {
+        const row = document.createElement('div');
+        row.className = 'raid5-viz-row';
+        const sl = document.createElement('div');
+        sl.className = 'raid5-viz-cell raid5-stripe-label';
+        sl.textContent = `Stripe ${si + 1}`;
+        row.appendChild(sl);
+        stripe.row.forEach((cell, di) => {
+            const c = document.createElement('div');
+            c.id = `viz-s${si}-d${di}`;
+            c.className = 'raid5-viz-cell raid5-data-cell' + (cell.type === 'parity' ? ' raid5-parity-cell' : '');
+            c.textContent = cell.label;
+            row.appendChild(c);
+        });
+        wrapper.appendChild(row);
+    });
+
+    container.appendChild(wrapper);
+}
+
+function startRaid3Animation(diskCount, dataBlockCount, animationArea) {
+    const stripes = buildRaid3Layout(diskCount, dataBlockCount);
+    buildRaid3BlockViz(stripes, diskCount);
+
+    let delay = 0;
+    const CELL_OFFSET = 140;
+    const STRIPE_GAP  = 550;
+
+    stripes.forEach((stripe, si) => {
+        // All data bytes arrive together, parity arrives slightly after
+        stripe.row.forEach((cell, di) => {
+            const isParity = cell.type === 'parity';
+            const t = delay + (isParity ? (diskCount - 1) * CELL_OFFSET + 200 : di * CELL_OFFSET);
+            setTimeout(() => {
+                if (!simulationRunning) return;
+                animatePacketToDisk(cell.label, cell.label, di, animationArea, isParity, si, false, false);
+                const vizCell = document.getElementById(`viz-s${si}-d${di}`);
+                if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+            }, t);
+        });
+        delay += STRIPE_GAP + diskCount * CELL_OFFSET;
+    });
+}
+
+// ══════════════════════════════════════════════════════
+//  RAID 4 — Block-level striping with dedicated parity
+// ══════════════════════════════════════════════════════
+
+// Layout: last disk = dedicated parity. Full blocks striped round-robin across data disks.
+// Each stripe row = one round-robin pass (dataDiskCount data blocks + 1 parity block).
+function buildRaid4Layout(diskCount, dataBlockCount) {
+    const dataDiskCount = diskCount - 1;
+    const stripes = [];
+    let blockIdx = 1;
+    let stripeNum = 0;
+
+    while (blockIdx <= dataBlockCount) {
+        const row = [];
+        for (let d = 0; d < dataDiskCount; d++) {
+            if (blockIdx <= dataBlockCount) {
+                row.push({ type: 'data', label: `Block ${blockIdx}`, block: blockIdx });
+                blockIdx++;
+            } else {
+                row.push(null);
+            }
+        }
+        // Dedicated parity disk (last disk)
+        row.push({ type: 'parity', label: `P${stripeNum + 1}` });
+        stripes.push({ row });
+        stripeNum++;
+        if (blockIdx > dataBlockCount) break;
+    }
+    return stripes;
+}
+
+function buildRaid4BlockViz(stripes, diskCount) {
+    const container = document.getElementById('block-visualization');
+    container.innerHTML = '';
+    const dataDiskCount = diskCount - 1;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'raid5-viz-wrapper';
+
+    // Section header
+    const sectionRow = document.createElement('div');
+    sectionRow.className = 'raid5-viz-row raid5-header-row';
+    const blank = document.createElement('div');
+    blank.className = 'raid5-viz-cell raid5-stripe-label';
+    blank.textContent = '';
+    sectionRow.appendChild(blank);
+
+    const dataH = document.createElement('div');
+    dataH.className = 'raid5-viz-cell raid01-set-header';
+    dataH.style.gridColumn = `span ${dataDiskCount}`;
+    dataH.textContent = `Data Disks (${dataDiskCount})`;
+    sectionRow.appendChild(dataH);
+
+    const parH = document.createElement('div');
+    parH.className = 'raid5-viz-cell raid01-set-header raid01-set-b';
+    parH.textContent = 'Parity Disk';
+    sectionRow.appendChild(parH);
+    wrapper.appendChild(sectionRow);
+
+    // Disk header row
+    const headerRow = document.createElement('div');
+    headerRow.className = 'raid5-viz-row raid5-header-row';
+    const stripeH = document.createElement('div');
+    stripeH.className = 'raid5-viz-cell raid5-stripe-label';
+    stripeH.textContent = 'Stripe';
+    headerRow.appendChild(stripeH);
+    for (let d = 0; d < diskCount; d++) {
+        const dh = document.createElement('div');
+        dh.className = 'raid5-viz-cell raid5-disk-header' + (d === diskCount - 1 ? ' raid01-mirror-header' : '');
+        dh.textContent = d < dataDiskCount ? `Disk ${d + 1}` : 'Parity';
+        headerRow.appendChild(dh);
+    }
+    wrapper.appendChild(headerRow);
+
+    stripes.forEach((stripe, si) => {
+        const row = document.createElement('div');
+        row.className = 'raid5-viz-row';
+        const sl = document.createElement('div');
+        sl.className = 'raid5-viz-cell raid5-stripe-label';
+        sl.textContent = `Stripe ${si + 1}`;
+        row.appendChild(sl);
+        stripe.row.forEach((cell, di) => {
+            const c = document.createElement('div');
+            c.id = `viz-s${si}-d${di}`;
+            if (!cell) {
+                c.className = 'raid5-viz-cell raid5-data-cell';
+                c.textContent = '—';
+            } else {
+                c.className = 'raid5-viz-cell raid5-data-cell' + (cell.type === 'parity' ? ' raid5-parity-cell' : '');
+                c.textContent = cell.label;
+            }
+            row.appendChild(c);
+        });
+        wrapper.appendChild(row);
+    });
+
+    container.appendChild(wrapper);
+}
+
+function startRaid4Animation(diskCount, dataBlockCount, animationArea) {
+    const stripes = buildRaid4Layout(diskCount, dataBlockCount);
+    buildRaid4BlockViz(stripes, diskCount);
+
+    let delay = 0;
+    const CELL_OFFSET = 160;
+    const STRIPE_GAP  = 600;
+
+    stripes.forEach((stripe, si) => {
+        stripe.row.forEach((cell, di) => {
+            if (!cell) return;
+            const isParity = cell.type === 'parity';
+            // Parity arrives after all data blocks in the stripe
+            const t = delay + (isParity ? (diskCount - 1) * CELL_OFFSET + 250 : di * CELL_OFFSET);
+            setTimeout(() => {
+                if (!simulationRunning) return;
+                animatePacketToDisk(cell.label, cell.label, di, animationArea, isParity, si, false, false);
+                const vizCell = document.getElementById(`viz-s${si}-d${di}`);
+                if (vizCell) setTimeout(() => vizCell.classList.add('active'), 500);
+            }, t);
+        });
+        delay += STRIPE_GAP + diskCount * CELL_OFFSET;
+    });
+}
+
 // ── Select RAID Level ────────────────────────────────
 function selectRAID(raidLevel) {
     currentRAID = raidLevel;
@@ -651,7 +1043,22 @@ function onDiskCountChange() {
     const blockInput = document.getElementById('block-count');
     const hint = document.getElementById('block-limit-hint');
 
-    if (currentRAID === 'raid5' || currentRAID === 'raid6') {
+    if (currentRAID === 'raid2') {
+        // Max data blocks = 8 (we show 8 bit slices per block, keep UI reasonable)
+        blockInput.min = 1;
+        blockInput.max = 8;
+        if (parseInt(blockInput.value) > 8) blockInput.value = 8;
+        if (parseInt(blockInput.value) < 1) blockInput.value = 1;
+        if (hint) hint.textContent = 'Max: 8 data blocks (bit-slice view)';
+    } else if (currentRAID === 'raid3' || currentRAID === 'raid4') {
+        const dataDiskCount = diskCount - 1;
+        const maxBlocks = dataDiskCount * 5;
+        blockInput.min = 1;
+        blockInput.max = maxBlocks;
+        if (parseInt(blockInput.value) > maxBlocks) blockInput.value = maxBlocks;
+        if (parseInt(blockInput.value) < 1) blockInput.value = 1;
+        if (hint) hint.textContent = `Max: ${maxBlocks} (${dataDiskCount} data disk${dataDiskCount > 1 ? 's' : ''} × 5)`;
+    } else if (currentRAID === 'raid5' || currentRAID === 'raid6') {
         // Max DATA blocks = 10 (per spec)
         const maxBlocks = 10;
         blockInput.min = (currentRAID === 'raid6') ? 2 : 3;
@@ -690,7 +1097,17 @@ function initializeSimulation() {
         return;
     }
 
-    if (currentRAID === 'raid5') {
+    if (currentRAID === 'raid2') {
+        if (blockCount < 1 || blockCount > 8) {
+            alert('RAID 2 supports between 1 and 8 data blocks.'); return;
+        }
+    } else if (currentRAID === 'raid3' || currentRAID === 'raid4') {
+        const dataDiskCount = diskCount - 1;
+        const maxBlocks = dataDiskCount * 5;
+        if (blockCount < 1 || blockCount > maxBlocks) {
+            alert(`${config.name} requires between 1 and ${maxBlocks} data blocks.`); return;
+        }
+    } else if (currentRAID === 'raid5') {
         if (blockCount < 3 || blockCount > 10) {
             alert('RAID 5 requires between 3 and 10 data blocks.'); return;
         }
@@ -792,6 +1209,12 @@ function distributeBlocks(diskCount, blockCount) {
             block.assignedPosition = index;
             for (let d = 0; d < diskCount; d++) diskAssignments[d].push(block.id);
         });
+    } else if (currentRAID === 'raid3') {
+        // handled per-stripe in startRaid3Animation
+    } else if (currentRAID === 'raid4') {
+        // handled per-stripe in startRaid4Animation
+    } else if (currentRAID === 'raid2') {
+        // handled per-stripe in startRaid2Animation
     } else if (currentRAID === 'raid5') {
         // handled per-stripe in startAnimation
     } else {
@@ -827,6 +1250,12 @@ function startAnimation(diskCount, blockCount) {
         startRaid01Animation(diskCount, blockCount, animationArea);
     } else if (currentRAID === 'raid10') {
         startRaid10Animation(diskCount, blockCount, animationArea);
+    } else if (currentRAID === 'raid2') {
+        startRaid2Animation(diskCount, blockCount, animationArea);
+    } else if (currentRAID === 'raid3') {
+        startRaid3Animation(diskCount, blockCount, animationArea);
+    } else if (currentRAID === 'raid4') {
+        startRaid4Animation(diskCount, blockCount, animationArea);
     } else {
         startStandardAnimation(diskCount, animationArea);
     }
@@ -1229,7 +1658,29 @@ function updateStats(diskCount, blockCount) {
         const stripes = buildRaid5Layout(diskCount, blockCount);
         const totalCells = stripes.reduce((acc, s) => acc + s.row.filter(Boolean).length, 0);
         blocksPerDisk = Math.ceil(totalCells / diskCount);
-    } else if (['raid3', 'raid4'].includes(currentRAID)) {
+    } else if (currentRAID === 'raid2') {
+        let ec = 1;
+        while (ec < diskCount) {
+            const dd = diskCount - ec;
+            if (dd <= 0) break;
+            if (hammingECCCount(dd) === ec) break;
+            ec++;
+        }
+        const dataDiskCount2 = diskCount - ec;
+        usableCapacity = blockCount;
+        redundancy = `Yes (${ec} Hamming ECC disk${ec > 1 ? 's' : ''})`;
+        blocksPerDisk = blockCount * 8; // 8 bit-slices per block
+    } else if (currentRAID === 'raid3') {
+        const dataDiskCount3 = diskCount - 1;
+        usableCapacity = blockCount;
+        redundancy = 'Yes (1 dedicated parity disk)';
+        blocksPerDisk = Math.ceil(blockCount / dataDiskCount3);
+    } else if (currentRAID === 'raid4') {
+        const dataDiskCount4 = diskCount - 1;
+        usableCapacity = blockCount;
+        redundancy = 'Yes (1 dedicated parity disk)';
+        blocksPerDisk = Math.ceil(blockCount / dataDiskCount4);
+    } else if (['raid3_old', 'raid4_old'].includes(currentRAID)) {
         usableCapacity = blockCount - 1;
         redundancy = 'Yes (Parity)';
     } else if (currentRAID === 'raid6') {
@@ -1251,32 +1702,7 @@ function updateStats(diskCount, blockCount) {
     }
 
     if (!statsContainer) return;
-    statsContainer.innerHTML = `
-        <div class="stat-item">
-            <div class="stat-label">Total Blocks</div>
-            <div class="stat-value">${blockCount}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Num of Disks</div>
-            <div class="stat-value">${diskCount}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Distribution Method</div>
-            <div class="stat-value">${config.method}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Blocks per Disk</div>
-            <div class="stat-value">${blocksPerDisk}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Redundancy</div>
-            <div class="stat-value">${redundancy}</div>
-        </div>
-        <div class="stat-item">
-            <div class="stat-label">Usable Capacity</div>
-            <div class="stat-value">${usableCapacity}</div>
-        </div>
-    `;
+    
 }
 
 // ── Reset ─────────────────────────────────────────────

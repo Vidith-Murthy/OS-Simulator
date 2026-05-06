@@ -240,6 +240,13 @@
             </div>
 
             <!-- Simulation wrap: hidden for RAID 2/3/4 -->
+            <div id="no-sim-notice" class="no-sim-notice" style="display:none;">
+                <div class="info-card" style="text-align:center;padding:2rem;">
+                    <div class="info-card-tag">NOTICE</div>
+                    <p>Simulation not available for this RAID level. Select RAID 0, 1, 2, 3, 4, 5, 6, 0+1, or 1+0 to run an interactive simulation.</p>
+                </div>
+            </div>
+
             <div id="simulation-wrap">
 
                 <!-- Control Section -->
@@ -275,6 +282,7 @@
                         <div id="disks-container" class="disks-container"></div>
                     </div>
                     <div id="block-visualization" class="block-visualization"></div>
+                    <div id="stats" class="raid-stats-grid"></div>
                 </div>
 
             </div><!-- /simulation-wrap -->

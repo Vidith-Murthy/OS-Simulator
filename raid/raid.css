@@ -1482,3 +1482,42 @@ body::after {
     border-color: rgba(120,80,255,0.5);
     color: #c0a8ff;
 }
+
+/* ── RAID stats grid ─────────────────────────────── */
+.raid-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+    padding: 0 4px;
+}
+
+.stat-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stat-label {
+    font-size: 0.68rem;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.stat-value {
+    font-size: 0.95rem;
+    font-family: var(--font-mono);
+    color: var(--red);
+    font-weight: 700;
+}
+
+/* ── no-sim-notice ───────────────────────────────── */
+.no-sim-notice {
+    margin-top: 24px;
+}
