@@ -385,6 +385,10 @@ h1::after {
     z-index: 2;
 }
 
+.stage-icon i {
+    font-size: 22px;
+}
+
 .stage.active .stage-icon {
     background: var(--red-dim);
     border-color: var(--red);
