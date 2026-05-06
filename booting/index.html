@@ -4,839 +4,1091 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>OS Boot Visualization</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    :root {
+      --teal:        #c0392b;
+      --teal-dark:   #922b21;
+      --teal-light:  #e74c3c;
+      --teal-faint:  rgba(192,57,43,0.08);
+      --teal-border: rgba(192,57,43,0.25);
+      --teal-glow:   rgba(192,57,43,0.35);
+      --bg-page:     #111111;
+      --bg-card:     #1a1a1a;
+      --text-dark:   #f0f0f0;
+      --text-body:   #bbbbbb;
+      --text-muted:  #777777;
+      --success:     #27ae60;
+      --font:        'Poppins', sans-serif;
+      --mono:        'JetBrains Mono', monospace;
     }
-    
+
+    * { margin:0; padding:0; box-sizing:border-box; }
+
     body {
-      background-color: #0a0a0a;
-      color: #f0f0f0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
+      background: var(--bg-page);
+      color: var(--text-dark);
+      font-family: var(--font);
       min-height: 100vh;
-      overflow: hidden;
+      overflow-x: hidden;
     }
-    
-    .container {
-      width: 100%;
-      max-width: 800px;
-      padding: 24px;
-      position: relative;
+
+    /* ── NAVBAR ── */
+    nav {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal), var(--teal-light));
+      padding: 14px 5%;
+      display: flex; align-items: center; justify-content: space-between;
+      position: sticky; top:0; z-index:1000;
+      box-shadow: 0 2px 20px rgba(146,43,33,0.6);
     }
-    
-    .boot-container {
-      border-radius: 12px;
-      background-color: #111111;
-      border: 1px solid #2a2a2a;
-      padding: 32px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-      position: relative;
-      overflow: hidden;
+    .nav-logo {
+      display:flex; align-items:center; gap:10px;
+      color:#fff; font-size:20px; font-weight:700;
+      text-decoration:none; letter-spacing:1px;
     }
-    
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 36px;
+    .nav-logo:hover { color:#fff; text-decoration:none; }
+    .nav-links { display:flex; gap:10px; list-style:none; margin:0; }
+    .nav-links a {
+      color:rgba(255,255,255,0.88); text-decoration:none;
+      padding:8px 18px; border-radius:8px; font-size:14px; font-weight:500;
+      border:1px solid rgba(255,255,255,0.2); transition:all 0.25s ease;
+      display:flex; align-items:center; gap:6px;
     }
-    
-    .title {
-      font-size: 24px;
-      font-weight: 600;
-      color: #ffffff;
+    .nav-links a:hover, .nav-links a.active {
+      background:rgba(255,255,255,0.18); color:#fff;
+      border-color:rgba(255,255,255,0.4);
     }
-    
-    .subtitle {
-      font-size: 14px;
-      color: #8a8a8a;
-      margin-top: 4px;
+
+    /* ── BANNER ── */
+    .page-banner {
+      background: linear-gradient(135deg, var(--teal-dark), var(--teal), var(--teal-light));
+      padding: 48px 5% 64px;
+      position: relative; overflow: hidden;
     }
-    
-    .controls {
-      display: flex;
-      gap: 12px;
+    .page-banner::before {
+      content:''; position:absolute; top:-40px; right:-40px;
+      width:220px; height:220px; border-radius:50%;
+      background:rgba(255,255,255,0.06);
     }
-    
-    .btn {
-      background-color: #222222;
-      color: #ffffff;
-      border: none;
-      border-radius: 6px;
-      padding: 10px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
+    .page-banner h1 { color:#fff; font-size:clamp(1.8rem,3.5vw,2.6rem); font-weight:700; margin-bottom:8px; position:relative; z-index:1; }
+    .page-banner p  { color:rgba(255,255,255,0.8); font-size:15px; position:relative; z-index:1; }
+    .banner-wave { position:absolute; bottom:0; left:0; width:100%; line-height:0; }
+
+    /* ── MAIN ── */
+    .main-content { max-width:980px; margin:0 auto; padding:40px 24px 64px; }
+
+    /* ── CONTROL BAR ── */
+    .control-bar {
+      display:flex; align-items:center; justify-content:space-between;
+      background:#1a1a1a; border-radius:12px; padding:18px 24px;
+      box-shadow:0 4px 20px rgba(192,57,43,0.15);
+      border:1px solid var(--teal-border); margin-bottom:28px;
     }
-    
-    .btn:hover {
-      background-color: #333333;
+    .control-bar-left { display:flex; align-items:center; gap:14px; }
+    .speed-label { font-size:13px; font-weight:600; color:var(--text-body); }
+    .speed-select {
+      border:1px solid var(--teal-border); border-radius:8px;
+      padding:6px 12px; font-family:var(--font); font-size:13px;
+      color:var(--teal-light); background:#111111; cursor:pointer;
     }
-    
-    .btn-primary {
-      background-color: #3a86ff;
+    .speed-select:focus { outline:none; border-color:var(--teal); }
+    .btn-ctrl {
+      padding:10px 22px; border-radius:9px; font-size:13px;
+      font-weight:600; font-family:var(--font); cursor:pointer;
+      border:none; transition:all 0.2s ease;
+      display:flex; align-items:center; gap:7px;
     }
-    
-    .btn-primary:hover {
-      background-color: #2a76ef;
+    .btn-restart {
+      background:var(--teal-faint); color:var(--teal-dark);
+      border:1px solid var(--teal-border);
     }
-    
-    .stages {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
+    .btn-restart:hover { background:rgba(192,57,43,0.15); }
+    .btn-start {
+      background:linear-gradient(135deg, var(--teal-dark), var(--teal-light));
+      color:#fff; box-shadow:0 4px 14px var(--teal-glow);
     }
-    
-    .stage {
-      position: relative;
-      padding-left: 20px;
-      margin-left: 16px;
-      border-left: 2px solid #2a2a2a;
-      padding-bottom: 20px;
-      opacity: 0.4;
-      transition: opacity 0.5s ease;
+    .btn-start:hover { transform:translateY(-1px); box-shadow:0 6px 20px var(--teal-glow); background:linear-gradient(135deg,#a93226,#c0392b); }
+    .btn-start:disabled { opacity:0.55; cursor:not-allowed; transform:none; }
+
+    /* ── TWO-COLUMN LAYOUT ── */
+    .layout { display:grid; grid-template-columns:1fr 380px; gap:24px; align-items:start; }
+
+    /* ── VISUAL PANEL ── */
+    .visual-panel {
+      background:#1a1a1a; border-radius:14px;
+      border:1px solid var(--teal-border);
+      box-shadow:0 4px 20px rgba(192,57,43,0.12);
+      overflow:hidden;
     }
-    
-    .stage:last-child {
-      border-left: none;
+
+    .visual-panel-header {
+      background:linear-gradient(135deg, var(--teal-dark), var(--teal-light));
+      padding:14px 20px;
+      display:flex; align-items:center; gap:10px;
     }
-    
-    .stage.active {
-      opacity: 1;
+    .panel-dots { display:flex; gap:6px; }
+    .panel-dot {
+      width:10px; height:10px; border-radius:50%;
+      background:rgba(255,255,255,0.3);
     }
-    
-    .stage-indicator {
-      position: absolute;
-      left: -9px;
-      top: 0;
-      width: 16px;
-      height: 16px;
-      border-radius: 50%;
-      background-color: #2a2a2a;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .panel-dot.red   { background:#ff6b6b; }
+    .panel-dot.yellow{ background:#ffd93d; }
+    .panel-dot.green { background:#6bcb77; }
+    .panel-title { color:rgba(255,255,255,0.9); font-size:13px; font-weight:600; margin-left:6px; }
+
+    .visual-area {
+      height:260px; position:relative;
+      display:flex; align-items:center; justify-content:center;
+      overflow:hidden;
+      background:linear-gradient(135deg, #111111, #1a1a1a);
     }
-    
-    .stage.active .stage-indicator {
-      background-color: #3a86ff;
-      box-shadow: 0 0 0 4px rgba(58, 134, 255, 0.2);
+
+    /* ── POST Animation ── */
+    .anim-post {
+      display:flex; flex-direction:column; align-items:center; gap:18px;
+      width:100%; padding:20px;
     }
-    
-    .stage.completed .stage-indicator::after {
-      content: "";
-      display: block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background-color: #ffffff;
+    .post-grid {
+      display:grid; grid-template-columns:repeat(4,1fr); gap:10px; width:100%;
     }
-    
-    .stage-title {
-      font-size: 16px;
-      font-weight: 600;
-      margin-bottom: 8px;
+    .post-item {
+      background:#222; border-radius:8px; padding:10px 8px;
+      border:1px solid #333;
+      display:flex; flex-direction:column; align-items:center; gap:5px;
+      font-size:11px; font-weight:600; color:var(--text-muted);
+      transition:all 0.4s ease; opacity:0.4;
+      box-shadow:0 2px 8px rgba(0,0,0,0.3);
     }
-    
-    .stage.active .stage-title {
-      color: #ffffff;
+    .post-item i { font-size:1.2rem; color:var(--text-muted); transition:color 0.4s; }
+    .post-item.checking { opacity:1; border-color:var(--teal); color:var(--teal-dark); animation:postPulse 0.6s ease infinite alternate; }
+    .post-item.checking i { color:var(--teal); }
+    .post-item.ok { opacity:1; border-color:var(--success); color:var(--success); animation:none; }
+    .post-item.ok i { color:var(--success); }
+
+    @keyframes postPulse {
+      from { box-shadow:0 0 0 0 var(--teal-glow); }
+      to   { box-shadow:0 0 0 6px rgba(192,57,43,0); }
     }
-    
-    .stage-desc {
-      font-size: 14px;
-      color: #8a8a8a;
-      line-height: 1.5;
-      max-width: 580px;
+
+    .post-status {
+      font-family:var(--mono); font-size:11px; color:var(--teal-dark);
+      background:var(--teal-faint); padding:4px 14px; border-radius:20px;
+      border:1px solid var(--teal-border);
     }
-    
-    .progress-bar {
-      height: 4px;
-      background-color: #222222;
-      border-radius: 2px;
-      margin: 40px 0 24px;
-      position: relative;
-      overflow: hidden;
+
+    /* ── BIOS Animation ── */
+    .anim-bios {
+      display:flex; flex-direction:column; width:100%; height:100%; padding:16px 20px; gap:8px;
     }
-    
-    .progress {
-      position: absolute;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 0;
-      background: linear-gradient(90deg, #3a86ff, #5eacff);
-      border-radius: 2px;
-      transition: width 0.3s ease;
+    .bios-screen {
+      flex:1; background:#001a00; border-radius:8px; padding:12px 16px;
+      font-family:var(--mono); font-size:11px; color:#33ff33;
+      overflow:hidden; border:2px solid #0a5c0a;
     }
-    
-    .progress-info {
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
-      color: #8a8a8a;
+    .bios-line { opacity:0; transform:translateX(-8px); margin:2px 0; }
+    .bios-line.show { opacity:1; transform:translateX(0); transition:all 0.2s ease; }
+    .bios-line.dim { color:#1a8c1a; }
+    .bios-line.bright { color:#88ff88; font-weight:600; }
+    .bios-cursor { display:inline-block; background:#33ff33; width:8px; height:12px; animation:blink 1s step-end infinite; vertical-align:bottom; }
+    @keyframes blink { 50% { opacity:0; } }
+
+    /* ── BOOTLOADER Animation ── */
+    .anim-bootloader {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      width:100%; height:100%; gap:16px; padding:20px;
     }
-    
-    .visual-container {
-      height: 120px;
-      margin: 30px 0;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .grub-menu {
+      background:#0d0d0d; border-radius:10px; padding:16px; width:100%;
+      border:2px solid #333; font-family:var(--mono); font-size:12px;
     }
-    
-    .boot-animation {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .grub-title { color:#aaa; font-size:10px; margin-bottom:10px; text-align:center; letter-spacing:2px; }
+    .grub-entry {
+      padding:6px 12px; border-radius:4px; margin:3px 0;
+      color:#ccc; transition:all 0.3s;
     }
-    
-    .boot-icon {
-      position: relative;
-      width: 80px;
-      height: 80px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .grub-entry.selected {
+      background:var(--teal-dark); color:#fff;
+      box-shadow:0 0 12px rgba(192,57,43,0.5);
     }
-    
-    .boot-circle {
-      position: absolute;
-      border: 3px solid rgba(58, 134, 255, 0.2);
-      border-top: 3px solid #3a86ff;
-      border-radius: 50%;
-      width: 80px;
-      height: 80px;
-      animation: spin 1s linear infinite;
+    .grub-entry.selected::before { content:'► '; color:var(--teal-light); }
+    .grub-countdown {
+      font-family:var(--mono); font-size:12px; color:var(--teal);
+      text-align:center;
     }
-    
-    .boot-logo {
-      width: 40px;
-      height: 40px;
-      background-color: #ffffff;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-5-9h10v2H7z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+    .kernel-bar-wrap { width:100%; }
+    .kernel-bar-label { font-size:11px; color:var(--text-body); margin-bottom:6px; font-family:var(--mono); }
+    .kernel-bar-track { height:8px; background:#2a2a2a; border-radius:4px; overflow:hidden; }
+    .kernel-bar-fill {
+      height:100%; width:0; border-radius:4px;
+      background:linear-gradient(90deg, var(--teal-dark), var(--teal-light));
+      transition:width 0.3s ease;
+      box-shadow:0 0 8px var(--teal-glow);
     }
-    
-    .terminal {
-      display: none;
-      width: 100%;
-      height: 100%;
-      background-color: #0d0d0d;
-      border-radius: 6px;
-      padding: 12px;
-      font-family: monospace;
-      font-size: 13px;
-      color: #a0a0a0;
-      overflow: hidden;
+
+    /* ── KERNEL Animation ── */
+    .anim-kernel {
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      width:100%; height:100%; gap:14px; padding:20px;
     }
-    
-    .terminal-content {
-      height: 100%;
-      overflow: hidden;
+    .kernel-ring-wrap { position:relative; width:90px; height:90px; }
+    .kr { position:absolute; border-radius:50%; border:3px solid transparent; }
+    .kr1 { inset:0; border-top-color:var(--teal); border-right-color:var(--teal-light); animation:spin 1.2s linear infinite; }
+    .kr2 { inset:14px; border-bottom-color:var(--teal-dark); border-left-color:var(--teal); animation:spin 0.8s linear infinite reverse; }
+    .kr3 { inset:28px; border-top-color:var(--teal-light); animation:spin 1.6s linear infinite; }
+    .kernel-center { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:1.1rem; color:var(--teal); }
+    .kernel-modules {
+      display:flex; flex-wrap:wrap; gap:6px; justify-content:center; width:100%;
     }
-    
-    .log-line {
-      margin: 2px 0;
-      white-space: nowrap;
-      opacity: 0;
-      transform: translateY(10px);
+    .kmod {
+      padding:4px 10px; border-radius:20px; font-size:10px; font-family:var(--mono);
+      background:#222; border:1px solid #333; color:var(--text-muted);
+      transition:all 0.4s; font-weight:600;
     }
-    
-    .log-line.show {
-      opacity: 1;
-      transform: translateY(0);
-      transition: all 0.2s ease;
+    .kmod.loaded {
+      background:var(--teal-faint); border-color:var(--teal);
+      color:var(--teal-dark); box-shadow:0 0 8px rgba(192,57,43,0.2);
     }
-    
-    .highlight {
-      color: #3a86ff;
+
+    /* ── SERVICES Animation ── */
+    .anim-services {
+      display:flex; flex-direction:column; width:100%; height:100%; padding:16px 20px; gap:8px;
     }
-    
-    .success {
-      color: #2ecc71;
+    .service-item {
+      display:flex; align-items:center; gap:10px; padding:8px 12px;
+      border-radius:8px; background:#222; border:1px solid #333;
+      transition:all 0.4s ease; opacity:0.35;
     }
-    
-    .warning {
-      color: #f39c12;
+    .service-item.loading { opacity:1; border-color:var(--teal); background:var(--teal-faint); }
+    .service-item.done    { opacity:1; border-color:var(--success); background:rgba(39,174,96,0.05); }
+    .service-icon { width:28px; height:28px; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:12px; background:#333; color:var(--text-muted); flex-shrink:0; transition:all 0.4s; }
+    .service-item.loading .service-icon { background:var(--teal); color:#fff; }
+    .service-item.done    .service-icon { background:var(--success); color:#fff; }
+    .service-name { font-size:12px; font-weight:600; color:var(--text-muted); flex:1; transition:color 0.4s; }
+    .service-item.loading .service-name { color:var(--teal-dark); }
+    .service-item.done    .service-name { color:var(--text-dark); }
+    .service-status { font-size:10px; font-family:var(--mono); font-weight:600; }
+    .service-item.loading .service-status { color:var(--teal); }
+    .service-item.done    .service-status { color:var(--success); }
+
+    /* ── DESKTOP Animation ── */
+    .anim-desktop {
+      width:100%; height:100%; display:flex; flex-direction:column;
+      background:linear-gradient(135deg, #5c0a0a 0%, #922b21 50%, #c0392b 100%);
+      border-radius:0;
     }
-    
-    .error {
-      color: #e74c3c;
+    .desktop-wallpaper {
+      flex:1; position:relative; overflow:hidden; padding:14px;
+      display:grid; grid-template-columns:repeat(4,56px); gap:10px; align-content:start;
     }
-    
-    .kernel-loading {
-      display: none;
-      width: 100%;
-      height: 100%;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
+    .desk-icon {
+      display:flex; flex-direction:column; align-items:center; gap:4px;
+      opacity:0; transform:scale(0.5) translateY(10px);
+      transition:all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+      cursor:pointer;
     }
-    
-    .kernel-logo {
-      width: 80px;
-      height: 80px;
-      background-color: white;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.5 12a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0zM12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zm7.5 8.5L16 19.5 16 16l3.5-3.5L16 9V5.5l3.5 3.5L23 5.5v3l-3.5 3.5L23 15.5v3l-3.5-2.5zM8 19.5L4.5 16 1 18.5v-3L4.5 12 1 8.5v-3L4.5 8 8 4.5v3L4.5 11 8 14.5v5z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+    .desk-icon:hover { transform:scale(1.1) !important; }
+    .desk-icon-bg {
+      width:44px; height:44px; border-radius:10px;
+      background:rgba(255,255,255,0.2); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.2rem; color:#fff;
+      box-shadow:0 4px 12px rgba(0,0,0,0.15);
+      border:1px solid rgba(255,255,255,0.25);
     }
-    
-    .kernel-text {
-      font-size: 18px;
-      font-weight: 500;
-      color: #ffffff;
+    .desk-icon span { font-size:9px; color:rgba(255,255,255,0.9); font-weight:500; text-shadow:0 1px 3px rgba(0,0,0,0.4); }
+    .desktop-taskbar {
+      height:36px; background:rgba(0,0,0,0.3); backdrop-filter:blur(10px);
+      display:flex; align-items:center; padding:0 14px; gap:12px;
+      border-top:1px solid rgba(255,255,255,0.1);
     }
-    
-    .loading-dots {
-      display: flex;
-      gap: 4px;
+    .taskbar-start { font-size:16px; color:#fff; }
+    .taskbar-time { margin-left:auto; font-size:11px; color:rgba(255,255,255,0.8); font-family:var(--mono); }
+    .taskbar-icons { display:flex; gap:8px; }
+    .taskbar-icons i { font-size:11px; color:rgba(255,255,255,0.7); }
+
+    /* ── TERMINAL LOG PANEL ── */
+    .terminal-panel {
+      background:#1a1a1a; border-radius:14px;
+      border:1px solid var(--teal-border);
+      box-shadow:0 4px 20px rgba(192,57,43,0.1);
+      overflow:hidden; display:flex; flex-direction:column;
     }
-    
-    .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background-color: #3a86ff;
-      animation: pulse 1.5s infinite;
+    .term-header {
+      background:linear-gradient(135deg, var(--teal-dark), var(--teal-light));
+      padding:12px 16px; display:flex; align-items:center; gap:8px;
     }
-    
-    .dot:nth-child(2) {
-      animation-delay: 0.2s;
+    .term-dots { display:flex; gap:5px; }
+    .term-dot { width:9px; height:9px; border-radius:50%; }
+    .term-title { color:rgba(255,255,255,0.9); font-size:12px; font-weight:600; margin-left:4px; font-family:var(--mono); }
+
+    .term-body {
+      flex:1; background:#0d1f1c; padding:14px 16px;
+      font-family:var(--mono); font-size:11.5px;
+      min-height:220px; max-height:220px; overflow-y:auto;
+      scrollbar-width:thin; scrollbar-color:var(--teal) #0d1f1c;
     }
-    
-    .dot:nth-child(3) {
-      animation-delay: 0.4s;
+    .term-body::-webkit-scrollbar { width:4px; }
+    .term-body::-webkit-scrollbar-track { background:#0d1f1c; }
+    .term-body::-webkit-scrollbar-thumb { background:var(--teal); border-radius:2px; }
+
+    .term-line { margin:2px 0; opacity:0; transform:translateX(-6px); display:flex; gap:6px; }
+    .term-line.show { opacity:1; transform:translateX(0); transition:all 0.18s ease; }
+    .term-prompt { color:var(--teal-light); flex-shrink:0; }
+    .term-text { color:#a8d5ce; }
+    .term-text.ok   { color:#6bcb77; }
+    .term-text.warn { color:#ffd93d; }
+    .term-text.info { color:var(--teal-light); font-weight:600; }
+
+    /* ── STAGES PANEL ── */
+    .stages-panel {
+      background:#1a1a1a; border-radius:14px;
+      border:1px solid var(--teal-border);
+      box-shadow:0 4px 20px rgba(192,57,43,0.1);
+      padding:24px; margin-top:24px;
     }
-    
-    .desktop-loading {
-      display: none;
-      width: 100%;
-      height: 100%;
+    .stages-header {
+      display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;
     }
-    
-    .desktop-bg {
-      width: 100%;
-      height: 100%;
-      position: relative;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
-      border-radius: 6px;
-      overflow: hidden;
+    .stages-title { font-size:15px; font-weight:700; color:var(--text-dark); }
+    .overall-badge {
+      font-size:11px; font-weight:600; font-family:var(--mono);
+      color:var(--teal); background:var(--teal-faint);
+      border:1px solid var(--teal-border); border-radius:20px;
+      padding:3px 12px;
     }
-    
-    .taskbar {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      height: 36px;
-      background-color: rgba(20, 20, 30, 0.8);
-      backdrop-filter: blur(10px);
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
+
+    /* Progress bar overall */
+    .overall-progress-wrap { margin-bottom:24px; }
+    .overall-progress-track {
+      height:8px; background:#2a2a2a; border-radius:4px; overflow:hidden;
+      position:relative;
     }
-    
-    .start-btn {
-      width: 24px;
-      height: 24px;
-      background-color: white;
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 0h6v6h-6v-6z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
-      margin-right: 16px;
+    .overall-progress-fill {
+      height:100%; width:0%;
+      background:linear-gradient(90deg, var(--teal-dark), var(--teal-light));
+      border-radius:4px; transition:width 0.4s ease;
+      box-shadow:0 0 10px var(--teal-glow);
     }
-    
-    .desktop-icons {
-      padding: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, 60px);
-      gap: 16px;
+    .overall-progress-shimmer {
+      position:absolute; inset:0;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation:shimmer 1.5s infinite; width:60%; border-radius:4px;
     }
-    
-    .desktop-icon {
-      width: 60px;
-      height: 60px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 6px;
-      opacity: 0;
-      transform: translateY(10px);
-      transition: all 0.3s ease;
+    @keyframes shimmer { 0%{left:-60%} 100%{left:100%} }
+
+    /* Stage rows */
+    .stage-row {
+      display:flex; align-items:center; gap:14px; padding:12px 0;
+      border-bottom:1px solid #2a2a2a; cursor:pointer;
+      transition:all 0.3s ease; border-radius:8px; padding:10px 10px;
+      margin:0 -10px;
     }
-    
-    .icon {
-      width: 32px;
-      height: 32px;
-      background-color: white;
+    .stage-row:last-child { border-bottom:none; }
+    .stage-row:hover { background:#222; }
+    .stage-row.active { background:var(--teal-faint); }
+
+    .stage-num {
+      width:34px; height:34px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:700; transition:all 0.4s ease;
+      background:#2a2a2a; border:2px solid #3a3a3a; color:var(--text-muted);
     }
-    
-    .icon-label {
-      font-size: 10px;
-      color: white;
-      text-align: center;
-      width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+    .stage-row.active    .stage-num { background:var(--teal); border-color:var(--teal); color:#fff; box-shadow:0 0 0 4px rgba(192,57,43,0.15); animation:pulseDot 1.5s ease infinite; }
+    .stage-row.completed .stage-num { background:var(--teal-dark); border-color:var(--teal-dark); color:#fff; }
+
+    @keyframes pulseDot {
+      0%,100% { box-shadow:0 0 0 4px rgba(192,57,43,0.15); }
+      50%      { box-shadow:0 0 0 8px rgba(192,57,43,0.05); }
     }
-    
-    .icon-1 {
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+
+    .stage-info { flex:1; min-width:0; }
+    .stage-name { font-size:13px; font-weight:600; color:var(--text-muted); transition:color 0.3s; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .stage-row.active    .stage-name { color:var(--teal-dark); }
+    .stage-row.completed .stage-name { color:var(--text-dark); }
+
+    .stage-mini-bar { height:3px; background:#2a2a2a; border-radius:2px; margin-top:5px; overflow:hidden; display:none; }
+    .stage-row.active .stage-mini-bar { display:block; }
+    .stage-mini-fill {
+      height:100%; width:0%; border-radius:2px;
+      background:linear-gradient(90deg, var(--teal-dark), var(--teal-light));
+      transition:width 0.3s ease;
     }
-    
-    .icon-2 {
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-5 14H4v-4h11v4zm0-5H4V9h11v4zm5 5h-4V9h4v9z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+
+    .stage-tag {
+      font-size:10px; font-weight:700; font-family:var(--mono);
+      padding:3px 10px; border-radius:20px; flex-shrink:0; transition:all 0.3s;
+      background:#222; color:var(--text-muted); border:1px solid #333;
     }
-    
-    .icon-3 {
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+    .stage-row.active    .stage-tag { background:rgba(192,57,43,0.15); color:var(--teal); border-color:var(--teal-border); }
+    .stage-row.completed .stage-tag { background:rgba(39,174,96,0.1);   color:var(--success); border-color:rgba(39,174,96,0.3); }
+
+    /* connector lines between stages */
+    .stage-connector-line {
+      width:2px; height:10px; background:#2a2a2a;
+      margin:0 auto; margin-left:27px; transition:background 0.4s;
     }
-    
-    .icon-4 {
-      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z'/%3E%3C/svg%3E") no-repeat center center;
-      mask-size: contain;
+    .stage-connector-line.done { background:var(--teal-border); }
+
+    /* ── ANIMATIONS ── */
+    @keyframes spin { to { transform:rotate(360deg); } }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+
+    /* ── FOOTER ── */
+    footer {
+      background:linear-gradient(135deg, var(--teal-dark), var(--teal));
+      color:rgba(255,255,255,0.85); text-align:center;
+      padding:24px; font-size:13px; margin-top:40px;
     }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(0.5); opacity: 0.5; }
-      50% { transform: scale(1); opacity: 1; }
+    footer a { color:#fff; }
+
+    @media(max-width:768px) {
+      .layout { grid-template-columns:1fr; }
+      .nav-links { display:none; }
+      .control-bar { flex-direction:column; gap:14px; align-items:stretch; }
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="boot-container">
-      <div class="header">
-        <div>
-          <h1 class="title">OS Boot Visualization</h1>
-          <p class="subtitle">Modern boot sequence demonstration</p>
-        </div>
-        <div class="controls">
-          <button id="restartBtn" class="btn">Restart</button>
-          <button id="startBtn" class="btn btn-primary">Start Boot</button>
-        </div>
-      </div>
-      
-      <div class="visual-container">
-        <div id="bootAnimation" class="boot-animation">
-          <div class="boot-icon">
-            <div class="boot-circle"></div>
-            <div class="boot-logo"></div>
-          </div>
-        </div>
-        
-        <div id="terminal" class="terminal">
-          <div class="terminal-content" id="terminalContent">
-            <!-- Terminal logs will be dynamically inserted here -->
-          </div>
-        </div>
-        
-        <div id="kernelLoading" class="kernel-loading">
-          <div class="kernel-logo"></div>
-          <div class="kernel-text">Loading Kernel</div>
-          <div class="loading-dots">
-            <div class="dot"></div>
-            <div class="dot"></div>
-            <div class="dot"></div>
-          </div>
-        </div>
-        
-        <div id="desktopLoading" class="desktop-loading">
-          <div class="desktop-bg">
-            <div class="desktop-icons">
-              <div class="desktop-icon">
-                <div class="icon icon-1"></div>
-                <div class="icon-label">Files</div>
-              </div>
-              <div class="desktop-icon">
-                <div class="icon icon-2"></div>
-                <div class="icon-label">Terminal</div>
-              </div>
-              <div class="desktop-icon">
-                <div class="icon icon-3"></div>
-                <div class="icon-label">Security</div>
-              </div>
-              <div class="desktop-icon">
-                <div class="icon icon-4"></div>
-                <div class="icon-label">Search</div>
-              </div>
-            </div>
-            <div class="taskbar">
-              <div class="start-btn"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      <div class="progress-bar">
-        <div class="progress" id="progressBar"></div>
-      </div>
-      
-      <div class="progress-info">
-        <div id="currentStage">Ready to start</div>
-        <div id="progressPercentage">0%</div>
-      </div>
-      
-      <div class="stages">
-        <div class="stage" data-stage="1">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">Power-On Self-Test (POST)</h3>
-          <p class="stage-desc">Hardware initialization and basic system integrity checks. Verifies CPU, memory, and essential peripherals are functioning properly.</p>
-        </div>
-        
-        <div class="stage" data-stage="2">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">BIOS/UEFI Initialization</h3>
-          <p class="stage-desc">System firmware loads, initializes hardware components, and prepares the environment for the bootloader.</p>
-        </div>
-        
-        <div class="stage" data-stage="3">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">Bootloader Stage</h3>
-          <p class="stage-desc">GRUB/bootloader locates and loads the kernel image, prepares initial RAM disk and kernel parameters.</p>
-        </div>
-        
-        <div class="stage" data-stage="4">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">Kernel Initialization</h3>
-          <p class="stage-desc">OS kernel loads into memory and initializes. Hardware detection, driver loading, and memory management systems are set up.</p>
-        </div>
-        
-        <div class="stage" data-stage="5">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">System Services</h3>
-          <p class="stage-desc">Init system/systemd starts essential system services, mounts file systems, and initializes networking components.</p>
-        </div>
-        
-        <div class="stage" data-stage="6">
-          <div class="stage-indicator"></div>
-          <h3 class="stage-title">User Interface</h3>
-          <p class="stage-desc">Display server initializes, login manager loads, and desktop environment starts. System is ready for user interaction.</p>
-        </div>
-      </div>
+
+<!-- NAVBAR -->
+<nav>
+  <a href="../index.html" class="nav-logo"><i class="fas fa-server"></i> OS VISUALIZER</a>
+  
+</nav>
+
+<!-- BANNER -->
+<div class="page-banner">
+  <h1><i class="fas fa-power-off" style="margin-right:12px;opacity:0.9;"></i>Booting Process</h1>
+  <p>Watch how an operating system comes alive — from power-on to a fully loaded desktop.</p>
+  <svg class="banner-wave" viewBox="0 0 1440 40" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <path d="M0,40 C360,0 1080,40 1440,10 L1440,40 Z" fill="#111111"/>
+  </svg>
+</div>
+
+<!-- MAIN -->
+<div class="main-content">
+
+  <!-- CONTROL BAR -->
+  <div class="control-bar">
+    <div class="control-bar-left">
+      <i class="fas fa-sliders-h" style="color:var(--teal);font-size:16px;"></i>
+      <span class="speed-label">Boot Speed:</span>
+      <select class="speed-select" id="speedSelect">
+        <option value="1">Normal</option>
+        <option value="2">Fast</option>
+        <option value="0.5">Slow</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button id="restartBtn" class="btn-ctrl btn-restart"><i class="fas fa-redo"></i> Restart</button>
+      <button id="startBtn"   class="btn-ctrl btn-start"><i class="fas fa-play"></i> Start Boot</button>
     </div>
   </div>
 
-  <script>
-    // Boot visualization logic
-    const startBtn = document.getElementById('startBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const progressBar = document.getElementById('progressBar');
-    const progressPercentage = document.getElementById('progressPercentage');
-    const currentStage = document.getElementById('currentStage');
-    const stages = document.querySelectorAll('.stage');
-    const bootAnimation = document.getElementById('bootAnimation');
-    const terminal = document.getElementById('terminal');
-    const terminalContent = document.getElementById('terminalContent');
-    const kernelLoading = document.getElementById('kernelLoading');
-    const desktopLoading = document.getElementById('desktopLoading');
-    
-    let isRunning = false;
-    let currentStageNum = 0;
-    let progressValue = 0;
-    let bootInterval;
-    
-    // Terminal logs for each stage
-    const terminalLogs = [
-      // POST stage logs
-      [
-        "Starting Power-On Self-Test...",
-        "CPU: Intel Core i7-12700K @ 3.60GHz",
-        "Testing system memory...",
-        "Memory Check: 32768MB OK",
-        "Initializing primary storage controller...",
-        "NVMe SSD detected: 1TB Samsung 980 PRO",
-        "POST completed successfully."
-      ],
-      // BIOS/UEFI stage logs
-      [
-        "UEFI Firmware v3.21 initializing...",
-        "Detecting hardware components...",
-        "CPU: 12 cores, 20 threads",
-        "Initializing memory controllers...",
-        "Loading hardware profiles...",
-        "Checking boot devices...",
-        "Boot device priority set: NVMe SSD",
-        "UEFI secure boot: Enabled",
-        "Firmware initialization complete."
-      ],
-      // Bootloader stage logs
-      [
-        "GRUB bootloader v2.06 starting...",
-        "Reading boot configuration...",
-        "Loading kernel image: /boot/vmlinuz-6.2.0",
-        "Loading initramfs: /boot/initrd.img-6.2.0",
-        "Setting kernel parameters...",
-        "Preparing to boot OS kernel...",
-        "Transferring control to kernel..."
-      ],
-      // Kernel stage logs
-      [
-        "Booting Linux kernel 6.2.0...",
-        "Kernel command line: ro quiet splash",
-        "CPU: 12 cores online",
-        "Memory: 32768MB available",
-        "Initializing kernel memory allocator...",
-        "Detecting hardware devices...",
-        "Loading essential drivers...",
-        "Mounting root filesystem...",
-        "Starting init process..."
-      ],
-      // System services stage logs
-      [
-        "systemd v253 initializing as PID 1",
-        "Starting udev device manager...",
-        "Starting network services...",
-        "Starting system logger...",
-        "Mounting all filesystems...",
-        "Starting firewall service...",
-        "Starting hardware acceleration services...",
-        "Starting system authentication service...",
-        "System services initialization complete."
-      ],
-      // User interface stage logs
-      [
-        "Starting display server...",
-        "Initializing GPU drivers...",
-        "Loading desktop environment...",
-        "Starting user session services...",
-        "Initializing audio subsystem...",
-        "Starting system tray applications...",
-        "Loading user preferences...",
-        "Desktop environment ready.",
-        "Login screen initialized."
-      ]
-    ];
-    
-    // Start the boot visualization
-    startBtn.addEventListener('click', function() {
-      if (!isRunning) {
-        startBoot();
-        startBtn.textContent = 'Running...';
-        startBtn.disabled = true;
+  <!-- TWO-COLUMN -->
+  <div class="layout">
+
+    <!-- LEFT: Visual + Terminal -->
+    <div>
+      <!-- Visual Panel -->
+      <div class="visual-panel">
+        <div class="visual-panel-header">
+          <div class="panel-dots">
+            <div class="panel-dot red"></div>
+            <div class="panel-dot yellow"></div>
+            <div class="panel-dot green"></div>
+          </div>
+          <span class="panel-title" id="panelTitle">boot.sim — idle</span>
+        </div>
+        <div class="visual-area" id="visualArea">
+
+          <!-- 1: POST -->
+          <div id="animPost" class="anim-post" style="display:none;">
+            <div class="post-grid">
+              <div class="post-item" id="post-cpu"><i class="fas fa-microchip"></i>CPU</div>
+              <div class="post-item" id="post-ram"><i class="fas fa-memory"></i>RAM</div>
+              <div class="post-item" id="post-disk"><i class="fas fa-hdd"></i>Disk</div>
+              <div class="post-item" id="post-gpu"><i class="fas fa-tv"></i>GPU</div>
+            </div>
+            <div class="post-status" id="postStatus">Waiting...</div>
+          </div>
+
+          <!-- 2: BIOS -->
+          <div id="animBios" class="anim-bios" style="display:none;">
+            <div class="bios-screen" id="biosScreen"></div>
+          </div>
+
+          <!-- 3: Bootloader -->
+          <div id="animBoot" class="anim-bootloader" style="display:none;">
+            <div class="grub-menu">
+              <div class="grub-title">GNU GRUB  version 2.06</div>
+              <div class="grub-entry selected" id="grubEntry1">Ubuntu 22.04 LTS</div>
+              <div class="grub-entry" id="grubEntry2">Ubuntu — recovery mode</div>
+              <div class="grub-entry" id="grubEntry3">Memory test (memtest86+)</div>
+            </div>
+            <div class="kernel-bar-wrap">
+              <div class="kernel-bar-label">Loading kernel image... <span id="kernelPct">0%</span></div>
+              <div class="kernel-bar-track"><div class="kernel-bar-fill" id="kernelBar"></div></div>
+            </div>
+            <div class="grub-countdown" id="grubCountdown"></div>
+          </div>
+
+          <!-- 4: Kernel -->
+          <div id="animKernel" class="anim-kernel" style="display:none;">
+            <div class="kernel-ring-wrap">
+              <div class="kr kr1"></div><div class="kr kr2"></div><div class="kr kr3"></div>
+              <div class="kernel-center"><i class="fas fa-linux"></i></div>
+            </div>
+            <div class="kernel-modules" id="kernelModules">
+              <span class="kmod" id="km-cpu">cpu_driver</span>
+              <span class="kmod" id="km-mem">memory_mgr</span>
+              <span class="kmod" id="km-fs">filesystem</span>
+              <span class="kmod" id="km-net">network</span>
+              <span class="kmod" id="km-usb">usb_core</span>
+              <span class="kmod" id="km-pci">pci_driver</span>
+            </div>
+          </div>
+
+          <!-- 5: Services -->
+          <div id="animServices" class="anim-services" style="display:none;">
+            <div class="service-item" id="svc-systemd"><div class="service-icon"><i class="fas fa-cog"></i></div><span class="service-name">systemd</span><span class="service-status">—</span></div>
+            <div class="service-item" id="svc-network"><div class="service-icon"><i class="fas fa-network-wired"></i></div><span class="service-name">NetworkManager</span><span class="service-status">—</span></div>
+            <div class="service-item" id="svc-udev"><div class="service-icon"><i class="fas fa-plug"></i></div><span class="service-name">udev</span><span class="service-status">—</span></div>
+            <div class="service-item" id="svc-ssh"><div class="service-icon"><i class="fas fa-lock"></i></div><span class="service-name">SSH Daemon</span><span class="service-status">—</span></div>
+            <div class="service-item" id="svc-log"><div class="service-icon"><i class="fas fa-list"></i></div><span class="service-name">systemd-journald</span><span class="service-status">—</span></div>
+          </div>
+
+          <!-- 6: Desktop -->
+          <div id="animDesktop" class="anim-desktop" style="display:none;">
+            <div class="desktop-wallpaper">
+              <div class="desk-icon" id="di-files"><div class="desk-icon-bg"><i class="fas fa-folder"></i></div><span>Files</span></div>
+              <div class="desk-icon" id="di-term"><div class="desk-icon-bg"><i class="fas fa-terminal"></i></div><span>Terminal</span></div>
+              <div class="desk-icon" id="di-sec"><div class="desk-icon-bg"><i class="fas fa-shield-alt"></i></div><span>Security</span></div>
+              <div class="desk-icon" id="di-search"><div class="desk-icon-bg"><i class="fas fa-search"></i></div><span>Search</span></div>
+              <div class="desk-icon" id="di-mail"><div class="desk-icon-bg"><i class="fas fa-envelope"></i></div><span>Mail</span></div>
+              <div class="desk-icon" id="di-set"><div class="desk-icon-bg"><i class="fas fa-cog"></i></div><span>Settings</span></div>
+              <div class="desk-icon" id="di-calc"><div class="desk-icon-bg"><i class="fas fa-calculator"></i></div><span>Calc</span></div>
+              <div class="desk-icon" id="di-cam"><div class="desk-icon-bg"><i class="fas fa-camera"></i></div><span>Camera</span></div>
+            </div>
+            <div class="desktop-taskbar">
+              <i class="fas fa-th taskbar-start"></i>
+              <div class="taskbar-icons">
+                <i class="fas fa-wifi"></i>
+                <i class="fas fa-volume-up"></i>
+                <i class="fas fa-battery-three-quarters"></i>
+              </div>
+              <div class="taskbar-time" id="desktopTime">00:00</div>
+            </div>
+          </div>
+
+          <!-- Idle state -->
+          <div id="animIdle" style="display:flex;flex-direction:column;align-items:center;gap:14px;">
+            <div style="width:70px;height:70px;border-radius:50%;background:var(--teal-faint);border:2px dashed var(--teal-border);display:flex;align-items:center;justify-content:center;">
+              <i class="fas fa-power-off" style="font-size:1.6rem;color:var(--text-muted);"></i>
+            </div>
+            <div style="font-size:13px;color:var(--text-muted);font-family:var(--mono);">Press "Start Boot" to begin</div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Terminal Panel -->
+      <div class="terminal-panel" style="margin-top:20px;">
+        <div class="term-header">
+          <div class="term-dots">
+            <div class="term-dot" style="background:#ff6b6b;"></div>
+            <div class="term-dot" style="background:#ffd93d;"></div>
+            <div class="term-dot" style="background:#6bcb77;"></div>
+          </div>
+          <span class="term-title">terminal — boot log</span>
+        </div>
+        <div class="term-body" id="termBody">
+          <div class="term-line show"><span class="term-prompt">$</span><span class="term-text" style="color:#777777;">System idle. Awaiting boot sequence...</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Stage tracker -->
+    <div>
+      <div class="stages-panel">
+        <div class="stages-header">
+          <div class="stages-title"><i class="fas fa-list-ol" style="color:var(--teal);margin-right:8px;"></i>Boot Stages</div>
+          <div class="overall-badge" id="overallBadge">0 / 6</div>
+        </div>
+
+        <div class="overall-progress-wrap">
+          <div class="overall-progress-track">
+            <div class="overall-progress-fill" id="overallBar"></div>
+            <div class="overall-progress-shimmer" id="progressShimmer" style="display:none;"></div>
+          </div>
+        </div>
+
+        <div id="stagesList">
+          <!-- Stage rows injected by JS -->
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>&copy; 2025 OS Visualizer — <a href="../index.html">Back to Home</a></footer>
+
+<script>
+  // ── DATA ──
+  const STAGES = [
+    { name:"Power-On Self-Test (POST)", icon:"fas fa-microchip", tag:"INIT" },
+    { name:"BIOS/UEFI Initialization",  icon:"fas fa-chip",      tag:"FIRMWARE" },
+    { name:"Bootloader Stage",          icon:"fas fa-hdd",       tag:"GRUB" },
+    { name:"Kernel Initialization",     icon:"fab fa-linux",     tag:"KERNEL" },
+    { name:"System Services",           icon:"fas fa-cogs",      tag:"SYSTEMD" },
+    { name:"User Interface",            icon:"fas fa-desktop",   tag:"UI" },
+  ];
+
+  const TERM_LOGS = [
+    [
+      {t:"info", msg:"[ POST ] Starting Power-On Self-Test..."},
+      {t:"text", msg:"Checking CPU integrity..."},
+      {t:"ok",   msg:"CPU: Intel Core i7-12700K @ 3.60GHz [OK]"},
+      {t:"text", msg:"Testing system memory..."},
+      {t:"ok",   msg:"Memory: 32768 MB [OK]"},
+      {t:"text", msg:"Scanning storage devices..."},
+      {t:"ok",   msg:"NVMe SSD: 1TB Samsung 980 PRO [OK]"},
+      {t:"ok",   msg:"POST completed successfully."},
+    ],
+    [
+      {t:"info", msg:"[ BIOS ] UEFI Firmware v3.21 initializing..."},
+      {t:"text", msg:"Enumerating PCI devices..."},
+      {t:"ok",   msg:"CPU: 12 cores / 20 threads detected"},
+      {t:"text", msg:"Initializing memory controllers..."},
+      {t:"ok",   msg:"XMP Profile: DDR5-5200 enabled"},
+      {t:"text", msg:"Configuring boot order..."},
+      {t:"ok",   msg:"Boot device: NVMe0 selected"},
+      {t:"warn", msg:"Secure Boot: Enabled"},
+      {t:"ok",   msg:"UEFI ready. Handing off to bootloader."},
+    ],
+    [
+      {t:"info", msg:"[ GRUB ] GNU GRUB v2.06 loading..."},
+      {t:"text", msg:"Reading /boot/grub/grub.cfg..."},
+      {t:"ok",   msg:"Config loaded. Found 3 entries."},
+      {t:"text", msg:"Loading /boot/vmlinuz-6.2.0-26-generic..."},
+      {t:"ok",   msg:"Kernel image loaded (12.4 MB)"},
+      {t:"text", msg:"Loading /boot/initrd.img-6.2.0..."},
+      {t:"ok",   msg:"initramfs loaded (63.7 MB)"},
+      {t:"ok",   msg:"Transferring control to kernel..."},
+    ],
+    [
+      {t:"info", msg:"[ KERNEL ] Linux 6.2.0 booting..."},
+      {t:"text", msg:"Decompressing kernel image..."},
+      {t:"ok",   msg:"CPU: 12 cores online"},
+      {t:"text", msg:"Initializing memory management..."},
+      {t:"ok",   msg:"32768 MB RAM available"},
+      {t:"text", msg:"Detecting hardware..."},
+      {t:"ok",   msg:"Loading cpu_driver, memory_mgr, filesystem..."},
+      {t:"ok",   msg:"Loading network, usb_core, pci_driver..."},
+      {t:"ok",   msg:"Kernel init complete. Starting PID 1..."},
+    ],
+    [
+      {t:"info", msg:"[ SYSTEMD ] systemd v253 — PID 1"},
+      {t:"text", msg:"Starting udev device manager..."},
+      {t:"ok",   msg:"[ OK ] udev"},
+      {t:"text", msg:"Starting NetworkManager..."},
+      {t:"ok",   msg:"[ OK ] NetworkManager"},
+      {t:"text", msg:"Starting SSH daemon..."},
+      {t:"ok",   msg:"[ OK ] sshd"},
+      {t:"text", msg:"Starting journald..."},
+      {t:"ok",   msg:"[ OK ] All services started."},
+    ],
+    [
+      {t:"info", msg:"[ UI ] Starting display server (Wayland)..."},
+      {t:"text", msg:"Initializing GPU driver (i915)..."},
+      {t:"ok",   msg:"Display: 1920x1080 @ 144Hz"},
+      {t:"text", msg:"Loading GNOME desktop environment..."},
+      {t:"ok",   msg:"GDM login manager ready"},
+      {t:"text", msg:"Loading user session..."},
+      {t:"ok",   msg:"Desktop environment initialized"},
+      {t:"ok",   msg:"System is ready. Welcome!"},
+    ],
+  ];
+
+  // ── STATE ──
+  let isRunning = false, currentStage = 0, progress = 0, interval = null;
+  let stageProgress = 0; // 0–100 within current stage
+  let speedMult = 1;
+  let clockInterval = null;
+
+  // ── BUILD STAGE LIST ──
+  const stagesList = document.getElementById('stagesList');
+  STAGES.forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'stage-row';
+    row.id = `stageRow${i+1}`;
+    row.innerHTML = `
+      <div class="stage-num" id="stageNum${i+1}">${i+1}</div>
+      <div class="stage-info">
+        <div class="stage-name">${s.name}</div>
+        <div class="stage-mini-bar"><div class="stage-mini-fill" id="stageFill${i+1}"></div></div>
+      </div>
+      <div class="stage-tag" id="stageTag${i+1}">${s.tag}</div>
+    `;
+    stagesList.appendChild(row);
+
+    if (i < STAGES.length - 1) {
+      const conn = document.createElement('div');
+      conn.className = 'stage-connector-line';
+      conn.id = `conn${i+1}`;
+      stagesList.appendChild(conn);
+    }
+  });
+
+  // ── DOM REFS ──
+  const startBtn   = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const speedSel   = document.getElementById('speedSelect');
+  const termBody   = document.getElementById('termBody');
+  const overallBar = document.getElementById('overallBar');
+  const overallBadge = document.getElementById('overallBadge');
+  const progressShimmer = document.getElementById('progressShimmer');
+  const panelTitle = document.getElementById('panelTitle');
+
+  // Visual anims
+  const allAnims = ['animIdle','animPost','animBios','animBoot','animKernel','animServices','animDesktop'];
+
+  speedSel.addEventListener('change', () => { speedMult = parseFloat(speedSel.value); });
+
+  startBtn.addEventListener('click', () => {
+    if (!isRunning) {
+      startBoot();
+      startBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Running...';
+      startBtn.disabled = true;
+      progressShimmer.style.display = 'block';
+    }
+  });
+
+  restartBtn.addEventListener('click', () => { resetBoot(); });
+
+  // ── BOOT LOGIC ──
+  function startBoot() {
+    isRunning = true;
+    progress = 0; currentStage = 0; stageProgress = 0;
+    interval = setInterval(tick, 80);
+    goToStage(1);
+  }
+
+  function tick() {
+    stageProgress += 0.8 * speedMult;
+    const globalPct = ((currentStage - 1) * 100 + stageProgress) / 6;
+    overallBar.style.width = Math.min(globalPct, 100) + '%';
+    document.getElementById(`stageFill${currentStage}`).style.width = Math.min(stageProgress, 100) + '%';
+
+    // Animate sub-visuals based on stageProgress
+    animateStage(currentStage, stageProgress);
+
+    if (stageProgress >= 100) {
+      if (currentStage < 6) {
+        goToStage(currentStage + 1);
+      } else {
+        completeAll();
+      }
+    }
+  }
+
+  function goToStage(n) {
+    currentStage = n;
+    stageProgress = 0;
+
+    // Update stage rows
+    STAGES.forEach((_, i) => {
+      const row = document.getElementById(`stageRow${i+1}`);
+      const num = document.getElementById(`stageNum${i+1}`);
+      const tag = document.getElementById(`stageTag${i+1}`);
+      const conn = document.getElementById(`conn${i+1}`);
+      row.classList.remove('active','completed');
+      if (i+1 < n) {
+        row.classList.add('completed');
+        num.innerHTML = '<i class="fas fa-check" style="font-size:11px;"></i>';
+        tag.textContent = 'DONE';
+        if (conn) conn.classList.add('done');
+      } else if (i+1 === n) {
+        row.classList.add('active');
+        num.textContent = i+1;
+        tag.textContent = STAGES[i].tag;
+      } else {
+        num.textContent = i+1;
+        tag.textContent = STAGES[i].tag;
       }
     });
-    
-    // Restart the visualization
-    restartBtn.addEventListener('click', function() {
-      resetBoot();
-      startBtn.textContent = 'Start Boot';
-      startBtn.disabled = false;
+
+    overallBadge.textContent = `${n-1} / 6`;
+    panelTitle.textContent = `boot.sim — stage ${n}: ${STAGES[n-1].tag.toLowerCase()}`;
+
+    // Show correct visual
+    showAnim(n);
+
+    // Log terminal
+    logStage(n - 1);
+  }
+
+  function showAnim(n) {
+    allAnims.forEach(id => document.getElementById(id).style.display = 'none');
+    const map = {1:'animPost',2:'animBios',3:'animBoot',4:'animKernel',5:'animServices',6:'animDesktop'};
+    const el = document.getElementById(map[n]);
+    el.style.display = (n===1||n===4||n===6)?'flex':(n===2||n===5)?'flex':'flex';
+    el.style.display = 'flex';
+    if (n===2) el.style.display='flex', document.getElementById('animBios').style.flexDirection='column';
+    // reset sub-animations
+    resetSubAnim(n);
+  }
+
+  function resetSubAnim(n) {
+    if (n===1) {
+      ['post-cpu','post-ram','post-disk','post-gpu'].forEach(id => {
+        const el=document.getElementById(id);
+        el.classList.remove('checking','ok');
+      });
+      document.getElementById('postStatus').textContent='Running checks...';
+    }
+    if (n===2) { document.getElementById('biosScreen').innerHTML=''; }
+    if (n===3) {
+      document.getElementById('kernelBar').style.width='0%';
+      document.getElementById('kernelPct').textContent='0%';
+      document.getElementById('grubCountdown').textContent='';
+      ['grubEntry1','grubEntry2','grubEntry3'].forEach((id,i)=>{
+        document.getElementById(id).className='grub-entry'+(i===0?' selected':'');
+      });
+    }
+    if (n===4) {
+      ['km-cpu','km-mem','km-fs','km-net','km-usb','km-pci'].forEach(id=>document.getElementById(id).classList.remove('loaded'));
+    }
+    if (n===5) {
+      ['svc-systemd','svc-network','svc-udev','svc-ssh','svc-log'].forEach(id=>{
+        const el=document.getElementById(id);
+        el.classList.remove('loading','done');
+        el.querySelector('.service-status').textContent='—';
+      });
+    }
+    if (n===6) {
+      document.querySelectorAll('.desk-icon').forEach(el=>{
+        el.style.opacity='0'; el.style.transform='scale(0.5) translateY(10px)';
+      });
+      updateClock();
+    }
+  }
+
+  // Sub-visual animations driven by stageProgress 0-100
+  let lastSubStep = -1;
+  function animateStage(n, p) {
+    if (n===1) animPOST(p);
+    if (n===2) animBIOS(p);
+    if (n===3) animBootloader(p);
+    if (n===4) animKernel(p);
+    if (n===5) animServices(p);
+    if (n===6) animDesktop(p);
+  }
+
+  // POST
+  let postStep=-1;
+  function animPOST(p) {
+    const items=[{id:'post-cpu',label:'CPU OK'},{id:'post-ram',label:'RAM OK'},{id:'post-disk',label:'Disk OK'},{id:'post-gpu',label:'GPU OK'}];
+    const step=Math.floor(p/25);
+    if(step===postStep) return;
+    postStep=step;
+    items.forEach((item,i)=>{
+      const el=document.getElementById(item.id);
+      if(i<step){ el.classList.remove('checking'); el.classList.add('ok'); }
+      else if(i===step){ el.classList.add('checking'); el.classList.remove('ok'); }
     });
-    
-    // Function to start the boot sequence
-    function startBoot() {
-      isRunning = true;
-      bootInterval = setInterval(updateBoot, 100);
-      showStage(1);
-    }
-    
-    // Reset boot visualization
-    function resetBoot() {
-      clearInterval(bootInterval);
-      isRunning = false;
-      currentStageNum = 0;
-      progressValue = 0;
-      
-      // Reset UI elements
-      progressBar.style.width = '0%';
-      progressPercentage.textContent = '0%';
-      currentStage.textContent = 'Ready to start';
-      
-      // Reset stages
-      stages.forEach(stage => {
-        stage.classList.remove('active', 'completed');
-      });
-      
-      // Reset visual elements
-      bootAnimation.style.display = 'flex';
-      terminal.style.display = 'none';
-      kernelLoading.style.display = 'none';
-      desktopLoading.style.display = 'none';
-      
-      // Clear terminal content
-      terminalContent.innerHTML = '';
-      
-      // Reset desktop icons
-      const desktopIcons = document.querySelectorAll('.desktop-icon');
-      desktopIcons.forEach(icon => {
-        icon.style.opacity = '0';
-        icon.style.transform = 'translateY(10px)';
-      });
-    }
-    
-    // Update boot progress
-    function updateBoot() {
-      progressValue += 0.5;
-      
-      if (progressValue <= 100) {
-        progressBar.style.width = progressValue + '%';
-        progressPercentage.textContent = Math.floor(progressValue) + '%';
-        
-        // Stage transitions
-        if (progressValue >= 16.6 && currentStageNum < 2) {
-          showStage(2);
-        } else if (progressValue >= 33.2 && currentStageNum < 3) {
-          showStage(3);
-        } else if (progressValue >= 49.8 && currentStageNum < 4) {
-          showStage(4);
-        } else if (progressValue >= 66.4 && currentStageNum < 5) {
-          showStage(5);
-        } else if (progressValue >= 83 && currentStageNum < 6) {
-          showStage(6);
-        } else if (progressValue >= 100) {
-          completeProcess();
-        }
+    const statuses=['Checking CPU...','Checking RAM...','Checking Disk...','Checking GPU...','All checks passed ✓'];
+    document.getElementById('postStatus').textContent = statuses[Math.min(step,4)];
+  }
+
+  // BIOS
+  const biosLines=[
+    {t:'dim',txt:'American Megatrends UEFI v3.21'},
+    {t:'',txt:'CPU: Intel(R) Core(TM) i7-12700K'},
+    {t:'bright',txt:'Memory: 32768 MB DDR5 XMP @ 5200MHz'},
+    {t:'',txt:'Scanning PCI bus...'},
+    {t:'',txt:'Storage: NVMe0 Samsung 980 PRO 1TB'},
+    {t:'bright',txt:'Secure Boot: ENABLED'},
+    {t:'',txt:'Handing off to bootloader...'},
+  ];
+  let biosStep=-1;
+  function animBIOS(p) {
+    const step=Math.floor(p/(100/biosLines.length));
+    if(step===biosStep) return;
+    biosStep=step;
+    const screen=document.getElementById('biosScreen');
+    if(step < biosLines.length) {
+      const line=document.createElement('div');
+      line.className='bios-line';
+      if(biosLines[step].t==='dim') line.classList.add('dim');
+      if(biosLines[step].t==='bright') line.classList.add('bright');
+      line.textContent=biosLines[step].txt;
+      screen.appendChild(line);
+      setTimeout(()=>line.classList.add('show'),30);
+      if(step===biosLines.length-1) {
+        const cur=document.createElement('span');
+        cur.className='bios-cursor'; screen.appendChild(cur);
       }
     }
-    
-    // Show specific stage
-    function showStage(stageNum) {
-      currentStageNum = stageNum;
-      
-      // Update stages UI
-      stages.forEach(stage => {
-        const stageId = parseInt(stage.dataset.stage);
-        
-        if (stageId < stageNum) {
-          stage.classList.remove('active');
-          stage.classList.add('completed');
-        } else if (stageId === stageNum) {
-          stage.classList.add('active');
-          stage.classList.remove('completed');
-        } else {
-          stage.classList.remove('active', 'completed');
-        }
-      });
-      
-      // Update current stage text
-      const currentStageName = document.querySelector(`.stage[data-stage="${stageNum}"] .stage-title`).textContent;
-      currentStage.textContent = `Stage ${stageNum}: ${currentStageName}`;
-      
-      // Update visuals based on stage
-      updateVisuals(stageNum);
-      
-      // Show terminal logs for this stage
-      showTerminalLogs(stageNum - 1);
+  }
+
+  // Bootloader
+  let bootStep=-1;
+  function animBootloader(p) {
+    document.getElementById('kernelBar').style.width=p+'%';
+    document.getElementById('kernelPct').textContent=Math.floor(p)+'%';
+    const step=Math.floor(p/33);
+    if(step===bootStep) return;
+    bootStep=step;
+    if(step===0) document.getElementById('grubCountdown').textContent='Autobooting in 3s...';
+    if(step===1) document.getElementById('grubCountdown').textContent='Loading kernel image...';
+    if(step>=2) document.getElementById('grubCountdown').textContent='Transferring to kernel...';
+  }
+
+  // Kernel modules
+  const kmOrder=['km-cpu','km-mem','km-fs','km-net','km-usb','km-pci'];
+  let kmStep=-1;
+  function animKernel(p) {
+    const step=Math.floor(p/(100/kmOrder.length));
+    if(step===kmStep) return;
+    kmStep=step;
+    if(step<kmOrder.length) document.getElementById(kmOrder[step]).classList.add('loaded');
+  }
+
+  // Services
+  const svcOrder=[
+    {id:'svc-systemd',name:'systemd',status:'ACTIVE'},
+    {id:'svc-udev',name:'udev',status:'ACTIVE'},
+    {id:'svc-network',name:'NetworkManager',status:'ACTIVE'},
+    {id:'svc-ssh',name:'sshd',status:'ACTIVE'},
+    {id:'svc-log',name:'journald',status:'ACTIVE'},
+  ];
+  let svcStep=-1;
+  function animServices(p) {
+    const step=Math.floor(p/(100/svcOrder.length));
+    if(step===svcStep) return;
+    // Mark previous as done
+    if(svcStep>=0 && svcStep<svcOrder.length) {
+      const prev=document.getElementById(svcOrder[svcStep].id);
+      prev.classList.remove('loading'); prev.classList.add('done');
+      prev.querySelector('.service-status').textContent=svcOrder[svcStep].status;
     }
-    
-    // Update visual components based on boot stage
-    function updateVisuals(stage) {
-      switch(stage) {
-        case 1: // POST
-        case 2: // BIOS/UEFI
-          bootAnimation.style.display = 'flex';
-          terminal.style.display = 'none';
-          kernelLoading.style.display = 'none';
-          desktopLoading.style.display = 'none';
-          break;
-        case 3: // Bootloader
-        case 4: // Kernel Init (early)
-          bootAnimation.style.display = 'none';
-          terminal.style.display = 'block';
-          kernelLoading.style.display = 'none';
-          desktopLoading.style.display = 'none';
-          break;
-        case 5: // System Services
-          bootAnimation.style.display = 'none';
-          terminal.style.display = 'none';
-          kernelLoading.style.display = 'flex';
-          desktopLoading.style.display = 'none';
-          break;
-        case 6: // User Interface
-          bootAnimation.style.display = 'none';
-          terminal.style.display = 'none';
-          kernelLoading.style.display = 'none';
-          desktopLoading.style.display = 'block';
-          
-          // Animate desktop icons appearing
-          setTimeout(() => {
-            const desktopIcons = document.querySelectorAll('.desktop-icon');
-            desktopIcons.forEach((icon, index) => {
-              setTimeout(() => {
-                icon.style.opacity = '1';
-                icon.style.transform = 'translateY(0)';
-              }, index * 150);
-            });
-          }, 500);
-          break;
-      }
+    svcStep=step;
+    if(step<svcOrder.length) {
+      const cur=document.getElementById(svcOrder[step].id);
+      cur.classList.add('loading');
+      cur.querySelector('.service-status').textContent='starting...';
     }
-    
-    // Show terminal logs for a specific stage
-    function showTerminalLogs(stageIndex) {
-      if (stageIndex >= 0 && stageIndex < terminalLogs.length) {
-        // Clear previous logs if changing stages
-        if (stageIndex === 0 || stageIndex === 2) {
-          terminalContent.innerHTML = '';
-        }
-        
-        const logs = terminalLogs[stageIndex];
-        
-        logs.forEach((log, index) => {
-          const logElement = document.createElement('div');
-          logElement.classList.add('log-line');
-          
-         // Add styling based on content (continued)
-         if (log.includes('OK') || log.includes('complete') || log.includes('successfully')) {
-            logElement.classList.add('success');
-          } else if (log.includes('warning')) {
-            logElement.classList.add('warning');
-          } else if (log.includes('error')) {
-            logElement.classList.add('error');
-          } else if (log.startsWith('Starting') || log.includes('Initializing') || log.includes('Loading')) {
-            logElement.classList.add('highlight');
-          }
-          
-          logElement.textContent = log;
-          terminalContent.appendChild(logElement);
-          
-          // Animate logs appearing with delay
-          setTimeout(() => {
-            logElement.classList.add('show');
-          }, index * 150);
-        });
-      }
+  }
+
+  // Desktop icons pop in
+  const deskIconIds=['di-files','di-term','di-sec','di-search','di-mail','di-set','di-calc','di-cam'];
+  let deskStep=-1;
+  function animDesktop(p) {
+    const step=Math.floor(p/(100/deskIconIds.length));
+    if(step===deskStep) return;
+    deskStep=step;
+    if(step<deskIconIds.length) {
+      const el=document.getElementById(deskIconIds[step]);
+      el.style.opacity='1';
+      el.style.transform='scale(1) translateY(0)';
     }
-    
-    // Complete the boot process
-    function completeProcess() {
-      clearInterval(bootInterval);
-      isRunning = false;
-      startBtn.textContent = 'Complete';
-      
-      // Mark all stages as completed
-      stages.forEach(stage => {
-        stage.classList.remove('active');
-        stage.classList.add('completed');
-      });
-      
+  }
+
+  // Desktop clock
+  function updateClock() {
+    const now=new Date();
+    document.getElementById('desktopTime').textContent =
+      now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  }
+
+  // ── TERMINAL LOGGING ──
+  let termQueue=[];
+  function logStage(idx) {
+    if(idx<0||idx>=TERM_LOGS.length) return;
+    TERM_LOGS[idx].forEach((entry, i) => {
       setTimeout(() => {
-        // Enable restart button
-        startBtn.disabled = true;
-        restartBtn.focus();
-      }, 1000);
-    }
-    
-    // Initialize with reset
-    resetBoot();
-  </script>
+        const line=document.createElement('div');
+        line.className='term-line';
+        const prompt=document.createElement('span');
+        prompt.className='term-prompt';
+        prompt.textContent = entry.t==='info' ? '▶' : '$';
+        const text=document.createElement('span');
+        text.className='term-text '+(entry.t==='ok'?'ok':entry.t==='warn'?'warn':entry.t==='info'?'info':'');
+        text.textContent=entry.msg;
+        line.appendChild(prompt); line.appendChild(text);
+        termBody.appendChild(line);
+        setTimeout(()=>{ line.classList.add('show'); termBody.scrollTop=termBody.scrollHeight; }, 30);
+      }, i * (200 / speedMult));
+    });
+  }
+
+  // ── COMPLETE ──
+  function completeAll() {
+    clearInterval(interval);
+    isRunning=false;
+    progressShimmer.style.display='none';
+    startBtn.innerHTML='<i class="fas fa-check-circle"></i> Boot Complete!';
+    overallBar.style.width='100%';
+    overallBadge.textContent='6 / 6';
+    panelTitle.textContent='boot.sim — system ready';
+
+    STAGES.forEach((_,i)=>{
+      const row=document.getElementById(`stageRow${i+1}`);
+      const num=document.getElementById(`stageNum${i+1}`);
+      const tag=document.getElementById(`stageTag${i+1}`);
+      row.classList.remove('active'); row.classList.add('completed');
+      num.innerHTML='<i class="fas fa-check" style="font-size:11px;"></i>';
+      tag.textContent='DONE';
+      const conn=document.getElementById(`conn${i+1}`);
+      if(conn) conn.classList.add('done');
+    });
+
+    // Final log
+    const line=document.createElement('div');
+    line.className='term-line';
+    line.innerHTML=`<span class="term-prompt">▶</span><span class="term-text ok" style="font-weight:600;">✓ Boot sequence complete. System is ready!</span>`;
+    termBody.appendChild(line);
+    setTimeout(()=>{ line.classList.add('show'); termBody.scrollTop=termBody.scrollHeight; },100);
+
+    // Start clock update
+    clockInterval=setInterval(updateClock,1000);
+    setTimeout(()=>{ startBtn.disabled=true; },500);
+  }
+
+  // ── RESET ──
+  function resetBoot() {
+    clearInterval(interval); clearInterval(clockInterval);
+    isRunning=false; currentStage=0; progress=0; stageProgress=0;
+    postStep=-1; biosStep=-1; bootStep=-1; kmStep=-1; svcStep=-1; deskStep=-1;
+
+    startBtn.innerHTML='<i class="fas fa-play"></i> Start Boot';
+    startBtn.disabled=false;
+    panelTitle.textContent='boot.sim — idle';
+    overallBar.style.width='0%';
+    overallBadge.textContent='0 / 6';
+    progressShimmer.style.display='none';
+
+    STAGES.forEach((_,i)=>{
+      const row=document.getElementById(`stageRow${i+1}`);
+      const num=document.getElementById(`stageNum${i+1}`);
+      const tag=document.getElementById(`stageTag${i+1}`);
+      const fill=document.getElementById(`stageFill${i+1}`);
+      const conn=document.getElementById(`conn${i+1}`);
+      row.classList.remove('active','completed');
+      num.textContent=i+1;
+      tag.textContent=STAGES[i].tag;
+      fill.style.width='0%';
+      if(conn) conn.classList.remove('done');
+    });
+
+    allAnims.forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('animIdle').style.display='flex';
+
+    termBody.innerHTML='<div class="term-line show"><span class="term-prompt">$</span><span class="term-text" style="color:#777777;">System reset. Awaiting boot sequence...</span></div>';
+  }
+</script>
+</body>
+</html>
