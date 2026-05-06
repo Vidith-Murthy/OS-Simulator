@@ -3,413 +3,423 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Disk Scheduling Visualization</title>
+    <title>Compare All — Disk Scheduling — OS Visualizer</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.0/jquery.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.11.4/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/particlesjs/2.2.3/particles.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="global-theme.css">
     <style>
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #0a0a0a;
-            color: white;
-            flex-direction: column;
-            font-family: 'Arial', sans-serif;
-            perspective: 1000px;
-            overflow: hidden;
+        .compare-panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 32px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
         }
-
-        .container {
-            position: relative;
-            transform-style: preserve-3d;
-            transform: rotateX(30deg);
-            margin-top: 20px;
+        .compare-panel h3 { margin-bottom: 20px; }
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
         }
-
-        .disk-container {
-            position: relative;
-            width: 400px;
-            height: 400px;
-            animation: rotateDisk 5s linear infinite;
-            border-radius: 50%;
-            background: radial-gradient(circle at center, #777, #333);
-            box-shadow: 
-                inset 0 0 20px #000, 
-                0 0 15px rgba(255, 255, 255, 0.2),
-                0 5px 15px rgba(0, 0, 0, 0.8);
-            transform-style: preserve-3d;
-            transform: translateZ(0);
+        .input-group label {
+            display: block;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
         }
-
-        .disk-center {
-            position: absolute;
-            width: 60px;
-            height: 60px;
-            background: radial-gradient(circle at 40% 40%, #aaa, #555);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
-            z-index: 10;
-        }
-
-        .disk-center::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(135deg, #888, #444);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);
-        }
-
-        .track {
-            position: absolute;
-            border: 1px solid rgba(180, 180, 180, 0.3);
-            border-radius: 50%;
-            background: transparent;
-            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
-        /*
-        .track-number {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 10px;
-            text-align: center;
-            text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
-        }
-            */
-
-        .highlight {
-            border-color: rgba(255, 165, 0, 0.7);
-            box-shadow: 0 0 5px rgba(255, 165, 0, 0.5);
-        }
-
-        .current-track {
-            border-color: #00ff00 !important;
-            box-shadow: 0 0 10px rgba(0, 255, 0, 0.7) !important;
-        }
-
-        /* Fixed arm assembly that doesn't rotate with the disk */
-        .arm-assembly {
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            top: 0;
-            left: 0;
-            z-index: 20;
-            pointer-events: none;
-        }
-
-        .arm-base {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: radial-gradient(circle at 40% 40%, #999, #555);
-            border-radius: 50%;
-            top: 50%;
-            right: -69px;
-            transform: translateY(-50%);
-            box-shadow: 
-                0 0 10px rgba(0, 0, 0, 0.8),
-                inset 0 0 5px rgba(255, 255, 255, 0.3);
-            z-index: 22;
-        }
-
-        .arm-base::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            background: radial-gradient(circle at 40% 40%, #777, #444);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: inset 0 0 3px rgba(0, 0, 0, 0.8);
-        }
-
-        .disk-arm {
-            position: absolute;
-            width: 250px; /*changed*/
-            height: 8px;
-            background: linear-gradient(to bottom, #888, #ccc, #888);
-            top: 50%;
-            right: -50px;
-            transform-origin: right center;
-            transform: translateY(-50%);
-            box-shadow: 
-                0 -1px 2px rgba(0, 0, 0, 0.6),
-                0 1px 2px rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            transition: transform 1s ease-in-out;
-            z-index: 21;
-        }
-
-        .arm-head {
-            position: absolute;
-            width: 15px;
-            height: 12px;
-            background: linear-gradient(to bottom, #777, #555);
-            border-radius: 2px;
-            top: 50%;
-            left: 0;
-            transform: translate(-100%, -50%);
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
-        }
-
-        .arm-head::after {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 4px;
-            background: linear-gradient(to bottom, #ff3333, #990000);
-            border-radius: 1px;
-            bottom: -2px;
-            left: 50%;
-            transform: translateX(-50%);
-            box-shadow: 0 0 5px rgba(255, 0, 0, 0.7);
-        }
-
-        .screw {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: radial-gradient(circle at 30% 30%, #aaa, #666);
-            border-radius: 50%;
-            box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.8);
-        }
-
-        .screw::after {
-            content: '';
-            position: absolute;
-            width: 4px;
-            height: 1px;
-            background: #444;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-
-        .screw:nth-child(1) { top: 20px; left: 20px; }
-        .screw:nth-child(2) { top: 20px; right: 20px; }
-        .screw:nth-child(3) { bottom: 20px; left: 20px; }
-        .screw:nth-child(4) { bottom: 20px; right: 20px; }
-
-        .disk-reflection {
-            position: absolute;
+        .input-group input {
             width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background: linear-gradient(135deg, 
-                rgba(255, 255, 255, 0.1) 0%, 
-                rgba(255, 255, 255, 0) 50%, 
-                rgba(255, 255, 255, 0.05) 100%);
-            pointer-events: none;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            transition: var(--transition);
         }
-
-        .controls {
-            margin-top: 30px;
-            background: linear-gradient(to bottom, #333, #222);
-            padding: 15px 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            border: 1px solid #444;
-        }
-
-        .controls h2 {
-            margin-top: 0;
-            color: #ddd;
-            text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
-        }
-
-        .control-group {
-            display: flex;
-            align-items: center;
-            margin: 10px 0;
-        }
-
-        label {
-            margin-right: 10px;
-            color: #bbb;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 200px;
-            height: 8px;
-            background: linear-gradient(to right, #444, #666);
-            border-radius: 4px;
+        .input-group input:focus {
             outline: none;
-            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.8);
+            border-color: var(--red);
+            box-shadow: 0 0 20px rgba(224, 48, 48, 0.15);
         }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(to bottom, #ccc, #888);
-            border-radius: 50%;
+        .btn-compare {
+            background: var(--red-dim);
+            color: var(--text-primary);
+            border: 1px solid var(--red);
+            padding: 12px 32px;
+            border-radius: 8px;
+            font-family: var(--font-mono);
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
             cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
         }
-
-        .track-info {
-            margin-top: 15px;
-            color: #aaa;
-            font-size: 14px;
+        .btn-compare:hover {
+            background: var(--red);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(224, 48, 48, 0.3);
         }
+        .btn-compare:active { transform: scale(0.97); }
 
-        @keyframes rotateDisk {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        /* Results Table */
+        .results-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
         }
-
-        @keyframes pulse {
-            0% { opacity: 0.7; }
-            50% { opacity: 1; }
-            100% { opacity: 0.7; }
+        .results-table thead th {
+            background: var(--red-dim);
+            color: var(--text-primary);
+            padding: 14px 16px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
         }
-
-        .led {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: #00ff00;
+        .results-table tbody td {
+            padding: 12px 16px;
+            color: var(--text-secondary);
+            font-size: 0.88rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-surface);
+            transition: var(--transition);
+        }
+        .results-table tbody tr:hover td {
+            background: var(--red-faint);
+            color: var(--text-primary);
+        }
+        .results-table tbody tr.best td {
+            color: #4caf50;
+            font-weight: 700;
+        }
+        .results-table tbody tr.worst td {
+            color: var(--red);
+        }
+        .rank-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
             border-radius: 50%;
-            margin-left: 10px;
-            box-shadow: 0 0 5px #00ff00;
-            animation: pulse 1.5s infinite;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            font-family: var(--font-mono);
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .rank-badge.gold { background: rgba(255,215,0,0.15); border-color: rgba(255,215,0,0.4); color: #ffd700; }
+        .rank-badge.silver { background: rgba(192,192,192,0.12); border-color: rgba(192,192,192,0.3); color: #c0c0c0; }
+        .rank-badge.bronze { background: rgba(205,127,50,0.12); border-color: rgba(205,127,50,0.3); color: #cd7f32; }
+
+        .seek-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: var(--bg-deep);
+            position: relative;
+            overflow: hidden;
+            min-width: 60px;
+        }
+        .seek-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, var(--red-dim), var(--red));
+            transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        .chart-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 24px;
+            backdrop-filter: blur(10px);
+            margin-bottom: 30px;
+        }
+        .chart-container h3 { margin-bottom: 16px; }
+
+        #results-section { display: none; }
+        #results-section.visible { display: block; }
+
+        .sequence-display {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 10px 14px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            margin-top: 6px;
+            word-break: break-all;
+        }
+
+        @media (max-width: 768px) {
+            .input-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
-    <div class="controls">
-        <h2>Disk Scheduling Visualization <span class="led"></span></h2>
-        <div class="control-group">
-            <label for="speed">Rotation Speed:</label>
-            <input type="range" id="speed" min="1" max="10" value="5">
-        </div>
-        <div class="track-info" id="track-info">Current Track: <span id="current-track-display">-</span></div>
+    <!-- Loading Screen -->
+    <div class="loader-wrapper">
+        <div class="loader"></div>
+        <div class="loader-text">ANALYZING_</div>
     </div>
-    
+
+    <!-- Particle Background -->
+    <div id="particles-js"></div>
+
+    <!-- NAV -->
+    <nav>
+        <a class="logo" href="../index.html">
+            <span class="logo-animation">OS VISUALIZER</span>
+        </a>
+        <div class="hamburger"><div></div><div></div><div></div></div>
+        <ul>
+            <li><button class="button" onclick="location.href='../index.html';"><i class="fas fa-home"></i> Home</button></li>
+            <li><button class="button" onclick="location.href='disk.html';"><i class="fas fa-hdd"></i> Disk Home</button></li>
+            <li><button class="button" onclick="location.href='../about.html';"><i class="fas fa-info-circle"></i> About</button></li>
+        </ul>
+    </nav>
+
+    <!-- Main -->
     <div class="container">
-        <div class="disk-container" id="disk">
-            <div class="disk-reflection"></div>
-            <!--
-            <div class="disk-center"></div>
-            -->
+        <div class="hero">
+            <div class="hero-badge">DISK SCHEDULING</div>
+            <h1>
+                <span class="word">Compare</span> <span class="word highlight">All</span><br>
+                <span class="word">Algorithms</span>
+            </h1>
+            <p class="intro-text">
+                Run all 8 disk scheduling algorithms on the same input and compare
+                seek distances, head movement, and efficiency side by side.
+            </p>
         </div>
-        
-        <!-- Fixed arm assembly that doesn't rotate with the disk -->
-        <div class="arm-assembly">
-            <div class="disk-arm" id="arm">
-                <div class="arm-head"></div>
+
+        <div class="section-label">// INPUT</div>
+
+        <!-- Input Panel -->
+        <div class="compare-panel">
+            <h3><i class="fas fa-keyboard" style="color:var(--red);margin-right:8px;font-size:1rem;"></i> Configuration</h3>
+            <div class="input-row">
+                <div class="input-group">
+                    <label for="request-seq">Request Sequence</label>
+                    <input type="text" id="request-seq" placeholder="e.g. 98, 183, 37, 122, 14, 124, 65, 67" value="98, 183, 37, 122, 14, 124, 65, 67">
+                </div>
+                <div class="input-group">
+                    <label for="head-pos">Initial Head Position</label>
+                    <input type="number" id="head-pos" min="0" value="53">
+                </div>
+                <div class="input-group">
+                    <label for="max-cyl">Max Cylinder</label>
+                    <input type="number" id="max-cyl" min="1" value="199">
+                </div>
             </div>
-            <div class="arm-base"></div>
+            <button class="btn-compare" id="btn-run"><i class="fas fa-play"></i> Run Comparison</button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results-section">
+            <div class="section-label">// RESULTS</div>
+
+            <div class="compare-panel">
+                <h3><i class="fas fa-trophy" style="color:var(--red);margin-right:8px;font-size:1rem;"></i> Seek Distance Ranking</h3>
+                <table class="results-table" id="results-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Algorithm</th>
+                            <th>Total Seek</th>
+                            <th>Seek Bar</th>
+                            <th>Sequence</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-bar" style="color:var(--red);margin-right:8px;font-size:1rem;"></i> Seek Distance Comparison</h3>
+                <div id="bar-chart"></div>
+            </div>
+
+            <div class="chart-container">
+                <h3><i class="fas fa-chart-line" style="color:var(--red);margin-right:8px;font-size:1rem;"></i> Head Movement Paths</h3>
+                <div id="line-chart"></div>
+            </div>
         </div>
     </div>
-    
+
+    <!-- Back to Top -->
+    <button class="back-to-top" aria-label="Back to top"><i class="fas fa-arrow-up"></i></button>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-content">
+            <div class="footer-brand">OS VISUALIZER</div>
+            <div class="social-links">
+                <a href="https://github.com/Vidith-Murthy/OS-Simulator" target="_blank" aria-label="GitHub"><i class="fab fa-github"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="global-theme.js"></script>
     <script>
-        const lastCylinder = 200;
-        const requestSequence = [120, 40, 180, 20, 80, 160, 60, 200, 20]
-        const sequence = [120, 40, 180, 20, 80, 160, 60, 200, 20]
-
-        
-        const diskContainer = document.getElementById("disk");
-        const speedSlider = document.getElementById("speed");
-        const armElement = document.getElementById("arm");
-        const currentTrackDisplay = document.getElementById("current-track-display");
-        
-        // Create tracks
-        const tracks = {};
-        for (let i = lastCylinder, j = lastCylinder; i >= 0; i -= 10, j--) {
-            const track = document.createElement("div");
-            track.classList.add("track");
-            track.style.width = track.style.height = `${(i / lastCylinder) * 400}px`;
-            track.style.left = track.style.top = `${(400 - (i / lastCylinder) * 400) / 2}px`;
-            
-            if (requestSequence.includes(i)) {
-                track.classList.add("highlight");
+    // ── Disk Scheduling Algorithms ──
+    const algorithms = {
+        'FCFS': (reqs, head) => [...reqs],
+        'SSTF': (reqs, head) => {
+            const res = [], q = [...reqs]; let cur = head;
+            while (q.length) {
+                let mi = 0;
+                for (let i = 1; i < q.length; i++)
+                    if (Math.abs(q[i] - cur) < Math.abs(q[mi] - cur)) mi = i;
+                cur = q.splice(mi, 1)[0]; res.push(cur);
             }
-            
-            const number = document.createElement("div");
-            number.classList.add("track-number");
-            //number.innerText = j;
-            number.style.left = "50%";
-            number.style.top = `${(i / lastCylinder) * 200}px`;
-            track.appendChild(number);
-            
-            diskContainer.appendChild(track);
-            tracks[i] = track;
-        }
-        
-        function moveHead(index) {
-            if (index >= sequence.length) {
-                // Reset highlight when sequence is complete
-                if (currentTrack) {
-                    currentTrack.classList.remove('highlight');
-                    currentTrack.classList.remove('current-track');
-                }
-                return;
-            }
+            return res;
+        },
+        'SCAN': (reqs, head, max) => {
+            const s = [...reqs].sort((a,b) => a - b);
+            return [...s.filter(r => r >= head), ...s.filter(r => r < head).reverse()];
+        },
+        'C-SCAN': (reqs, head) => {
+            const s = [...reqs].sort((a,b) => a - b);
+            return [...s.filter(r => r >= head), ...s.filter(r => r < head)];
+        },
+        'LOOK': (reqs, head) => {
+            const s = [...reqs].sort((a,b) => a - b);
+            return [...s.filter(r => r >= head), ...s.filter(r => r < head).reverse()];
+        },
+        'C-LOOK': (reqs, head) => {
+            const s = [...reqs].sort((a,b) => a - b);
+            return [...s.filter(r => r >= head), ...s.filter(r => r < head)];
+        },
+        'RSS': (reqs) => {
+            const r = [...reqs];
+            for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random()*(i+1)); [r[i],r[j]]=[r[j],r[i]]; }
+            return r;
+        },
+        'LIFO': (reqs) => [...reqs].reverse()
+    };
 
-            let targetTrack = sequence[index];
-            let trackSize = (targetTrack / lastCylinder) * 400;
-            let offset = (400 - trackSize) / 2;
+    function seekDist(seq, head) {
+        let d = 0, c = head;
+        for (const p of seq) { d += Math.abs(p - c); c = p; }
+        return d;
+    }
 
-            // Update current track display
-            currentTrackDisplay.textContent = targetTrack;
+    const COLORS = ['#e03030','#ff6b6b','#ff9f43','#ffd700','#4caf50','#00bcd4','#7c4dff','#e040fb'];
 
-            // Remove previous current track highlight
-            const previousTrack = document.querySelector('.current-track');
-            if (previousTrack) {
-                previousTrack.classList.remove('highlight');
-                previousTrack.classList.remove('current-track');
-            }
+    document.getElementById('btn-run').addEventListener('click', () => {
+        const seqStr = document.getElementById('request-seq').value.trim();
+        const head = parseInt(document.getElementById('head-pos').value) || 53;
+        const maxCyl = parseInt(document.getElementById('max-cyl').value) || 199;
+        const reqs = seqStr.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n) && n >= 0 && n <= maxCyl);
 
-            // Highlight current track
-            currentTrack = tracks[targetTrack];
-            if (currentTrack) {
-                currentTrack.classList.add('current-track');
-            }
+        if (reqs.length === 0) { alert('Please enter a valid request sequence.'); return; }
 
-            // Calculate arm angle based on track position
-            // Map track position (0-200) to angle (0-45 degrees)
-            const angle = (targetTrack / lastCylinder) * 45;
-
-            // Rotate the arm to point at the track
-            armElement.style.transform = `translateY(-50%) rotate(${angle}deg)`;
-
-            // Stay at the track for a moment before moving to next
-            setTimeout(() => {
-                moveHead(index + 1);
-            }, 2000);
-        }
-
-        // Start the animation
-        moveHead(0);
-        // Adjust rotation speed
-        speedSlider.addEventListener("input", () => {
-            const speed = speedSlider.value;
-            diskContainer.style.animation = `rotateDisk ${11 - speed}s linear infinite`;
+        // Run all algorithms
+        const results = [];
+        Object.entries(algorithms).forEach(([name, fn], i) => {
+            const seq = fn(reqs, head, maxCyl);
+            const dist = seekDist(seq, head);
+            results.push({ name, seq, dist, color: COLORS[i] });
         });
-        
-        // Hover and tilt effects
-        diskContainer.addEventListener('mousemove', (e) => {
-            const rect = diskContainer.getBoundingClientRect();
-            const x = e.clientX - rect.left - rect.width / 2;
-            const y = e.clientY - rect.top - rect.height / 2;
-            
-            diskContainer.style.transform = `translateZ(0) rotateX(${y * 0.03}deg) rotateY(${x * 0.03}deg)`;
+
+        // Sort by seek distance
+        results.sort((a, b) => a.dist - b.dist);
+        const maxDist = results[results.length - 1].dist;
+
+        // Show results section
+        document.getElementById('results-section').classList.add('visible');
+
+        // Build table
+        const tbody = document.querySelector('#results-table tbody');
+        tbody.innerHTML = '';
+        results.forEach((r, i) => {
+            const tr = document.createElement('tr');
+            if (i === 0) tr.classList.add('best');
+            if (i === results.length - 1) tr.classList.add('worst');
+            const badgeCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+            const pct = maxDist > 0 ? (r.dist / maxDist * 100) : 0;
+            tr.innerHTML = `
+                <td><span class="rank-badge ${badgeCls}">${i+1}</span></td>
+                <td style="font-weight:700;">${r.name}</td>
+                <td style="font-family:var(--font-mono);">${r.dist}</td>
+                <td><div class="seek-bar"><div class="seek-bar-fill" style="width:${pct}%"></div></div></td>
+                <td><div class="sequence-display">${r.seq.join(' → ')}</div></td>
+            `;
+            tbody.appendChild(tr);
         });
-        
-        diskContainer.addEventListener('mouseleave', () => {
-            diskContainer.style.transform = 'translateZ(0)';
-        });
+
+        // Bar Chart
+        Plotly.newPlot('bar-chart', [{
+            x: results.map(r => r.name),
+            y: results.map(r => r.dist),
+            type: 'bar',
+            marker: {
+                color: results.map(r => r.color),
+                line: { color: 'rgba(255,255,255,0.1)', width: 1 }
+            },
+            text: results.map(r => r.dist),
+            textposition: 'outside',
+            textfont: { color: '#c06060', family: 'Space Mono', size: 12 }
+        }], {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#c06060', family: 'Space Mono' },
+            xaxis: { gridcolor: 'rgba(224,48,48,0.08)', tickfont: { size: 11 } },
+            yaxis: { title: 'Total Seek Distance', gridcolor: 'rgba(224,48,48,0.08)' },
+            margin: { t: 30, b: 60, l: 60, r: 20 },
+            bargap: 0.35
+        }, { responsive: true, displayModeBar: false });
+
+        // Line Chart — head movement paths
+        const traces = results.map(r => ({
+            x: Array.from({ length: r.seq.length + 1 }, (_, i) => i),
+            y: [head, ...r.seq],
+            mode: 'lines+markers',
+            name: r.name,
+            line: { color: r.color, width: 2 },
+            marker: { size: 5 }
+        }));
+        Plotly.newPlot('line-chart', traces, {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            font: { color: '#c06060', family: 'Space Mono' },
+            xaxis: { title: 'Step', gridcolor: 'rgba(224,48,48,0.08)' },
+            yaxis: { title: 'Cylinder', gridcolor: 'rgba(224,48,48,0.08)' },
+            margin: { t: 20, b: 60, l: 60, r: 20 },
+            legend: { bgcolor: 'rgba(0,0,0,0)', font: { size: 11 } }
+        }, { responsive: true, displayModeBar: false });
+
+        // Scroll to results
+        setTimeout(() => {
+            document.getElementById('results-section').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 200);
+    });
     </script>
 </body>
 </html>
