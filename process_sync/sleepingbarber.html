@@ -166,7 +166,7 @@
     .actor {
         width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center;
         font-size: 24px; font-family: var(--font-mono); font-weight: bold; transition: var(--transition);
-        box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid; z-index: 10;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.5); border: 2px solid; z-index: 10; position: relative;
     }
     
     .barber { background: var(--red-faint); border-color: var(--color-barber); color: var(--color-barber); }
@@ -263,6 +263,55 @@
 
   <div class="log-panel" id="logPanel">
     <div class="log-entry system-log">Shop closed. Set chairs and start the shop.</div>
+  </div>
+</div>
+
+<div class="app-container" style="margin-top: 20px;">
+  <h1>The Sleeping Barber Problem</h1>
+  
+  <div style="background-color: var(--bg-surface); padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-subtle); border-left: 4px solid var(--red);">
+    <h3 style="color: var(--text-primary); font-size: 1.2rem; margin-bottom: 15px;">Problem Description</h3>
+    <p style="color: var(--text-secondary); font-size: 0.95rem;">The Sleeping Barber problem is a classic inter-process communication and synchronization problem between multiple operating system processes. The problem is analogous to keeping a barber working when there are customers, resting when there are none, and doing so in an orderly manner.</p>
+    <ul style="color: var(--text-secondary); font-size: 0.95rem; margin-left: 20px; padding-left: 0;">
+      <li style="margin-bottom: 8px;"><strong>Barber:</strong> Sleeps if there are no customers. If awoken, cuts hair.</li>
+      <li style="margin-bottom: 8px;"><strong>Customer:</strong> If the barber is sleeping, wakes him up. If the barber is busy but there are empty chairs, sits and waits. If there are no empty chairs, leaves.</li>
+    </ul>
+  </div>
+  
+  <div style="background-color: var(--bg-surface); padding: 25px; border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--border-subtle); border-left: 4px solid var(--red);">
+    <h3 style="color: var(--text-primary); font-size: 1.2rem; margin-bottom: 15px;">Pseudocode Algorithm</h3>
+    <pre style="background-color: var(--bg-deep); padding: 15px; border-radius: 8px; overflow-x: auto; color: var(--text-primary); font-family: var(--font-mono); font-size: 13px; border: 1px solid var(--border-subtle);">
+// Semaphores
+Semaphore customers = 0;   // Number of waiting customers
+Semaphore barber = 0;      // Barber status (0=sleeping, 1=ready)
+Semaphore mutex = 1;       // Protects the waiting room chair count
+int waiting = 0;           // Number of customers waiting
+
+// Barber Process
+function Barber() {
+    while (true) {
+        wait(customers);     // Go to sleep if no customers
+        wait(mutex);         // Enter critical section
+        waiting--;           // One less customer waiting
+        signal(barber);      // Barber is ready to cut hair
+        signal(mutex);       // Exit critical section
+        cut_hair();          // Cut hair (non-critical section)
+    }
+}
+
+// Customer Process
+function Customer() {
+    wait(mutex);             // Enter critical section
+    if (waiting < MAX_CHAIRS) {
+        waiting++;           // Take a waiting chair
+        signal(customers);   // Wake up barber if sleeping
+        signal(mutex);       // Exit critical section
+        wait(barber);        // Wait for barber to be ready
+        get_haircut();       // Get haircut
+    } else {
+        signal(mutex);       // Shop is full, leave
+    }
+}</pre>
   </div>
 </div>
 
