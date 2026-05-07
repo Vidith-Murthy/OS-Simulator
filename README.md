@@ -30,4 +30,4 @@ This project was developed as part of our Operating Systems course to provide a 
 <br>
 
 # Hosted Website Link
-https://majestic-melomakarona-70bda5.netlify.app/
+https://charming-cheesecake-69060a.netlify.app/
