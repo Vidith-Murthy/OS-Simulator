@@ -23,7 +23,6 @@ class ProcessResult extends Process {
 const algorithmSelect = document.getElementById('algorithm');
 const processTableBody = document.getElementById('processTableBody');
 const priorityHeader = document.getElementById('priorityHeader');
-const EDFHeader = document.getElementById('EDFHeader');
 const decreaseProcessesBtn = document.getElementById('decreaseProcesses');
 const increaseProcessesBtn = document.getElementById('increaseProcesses');
 const processCountDisplay = document.getElementById('processCount');
@@ -40,6 +39,8 @@ const disadvantagesList = document.getElementById('disadvantagesList');
 const descriptionList = document.getElementById('descriptionList');
 const backButton = document.getElementById('backButton');
 const osConceptsButton = document.getElementById('osConceptsButton');
+const timeQuantumContainer = document.getElementById('timeQuantumContainer');
+const timeQuantumInput = document.getElementById('timeQuantum');
 
 let processes = [
     new Process('P1', 0, 5, 3),
@@ -63,12 +64,7 @@ function attachEventListeners() {
     algorithmSelect.addEventListener('change', function() {
         const algorithm = this.value;
         priorityHeader.style.display = algorithm === 'Priority' ? 'table-cell' : 'none';
-        updateProcessTableUI();
-    });
-
-    algorithmSelect.addEventListener('change', function() {
-        const algorithm = this.value;
-        EDFHeader.style.display = algorithm === 'EDF' ? 'table-cell' : 'none';
+        timeQuantumContainer.style.display = algorithm === 'RoundRobin' ? 'flex' : 'none';
         updateProcessTableUI();
     });
 
@@ -116,7 +112,6 @@ function updateProcessesArray() {
 function updateProcessTableUI() {
     processTableBody.innerHTML = '';
     const showPriority = algorithmSelect.value === 'Priority';
-    const showEDF = algorithmSelect.value === 'EDF';
    
     processes.forEach((process, index) => {
         const row = document.createElement('tr');
@@ -164,19 +159,6 @@ function updateProcessTableUI() {
             priorityCell.appendChild(priorityInput);
             row.appendChild(priorityCell);
         }
-
-        if (showEDF) {
-            const EDFCell = document.createElement('td');
-            const EDFInput = document.createElement('input');
-            EDFInput.type = 'number';
-            EDFInput.min = '1';
-            EDFInput.value = process.priority;
-            EDFInput.addEventListener('change', function() {
-                processes[index].deadline = parseInt(this.value) || 1;
-            });
-            EDFCell.appendChild(EDFInput);
-            row.appendChild(EDFCell);
-        }
         
         processTableBody.appendChild(row);
     });
@@ -197,14 +179,13 @@ function runSchedulingAlgorithm() {
         case 'SRTF':
             calculationResult = calculateSRTF(processes);
             break;
-        case 'RoundRobin':
-            calculationResult = calculateRoundRobin(processes);
+        case 'RoundRobin': {
+            const tq = parseInt(timeQuantumInput.value) || 2;
+            calculationResult = calculateRoundRobin(processes, tq);
             break;
+        }
         case 'Priority':
             calculationResult = calculatePriority(processes);
-            break;
-        case 'EDF':
-            calculationResult = calculateEDF(processes);
             break;
         default:
             calculationResult = calculateFCFS(processes);
@@ -212,15 +193,15 @@ function runSchedulingAlgorithm() {
     
     results = calculationResult.results;
     ganttChart = calculationResult.ganttChart;
-    
 
     updateResultsUI(calculationResult);
-    drawGanttChart();
     updateAlgorithmInfo(algorithm);
-    
 
     resultsSection.style.display = 'block';
     hasRun = true;
+
+    // Draw after layout so canvas.parentElement.clientWidth is correct
+    requestAnimationFrame(() => drawGanttChart());
 }
 
 
@@ -262,66 +243,129 @@ function updateResultsUI(calculationResult) {
 function drawGanttChart() {
     const canvas = ganttChartCanvas;
     const ctx = canvas.getContext('2d');
+
+    // Resize canvas to match its CSS-rendered width so it's never squished or cut off
+    const containerWidth = canvas.parentElement.clientWidth || 800;
+    canvas.width = containerWidth;
+    canvas.height = 80;
+
+    const width  = canvas.width;
     const height = canvas.height;
 
+    ctx.clearRect(0, 0, width, height);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!ganttChart || ganttChart.length === 0) return;
 
+    // Always render from t=0
+    const chartStart = 0;
+    const chartEnd   = Math.max(...ganttChart.map(item => item.end));
+    const timeRange  = chartEnd - chartStart || 1;
 
-    const endTime = Math.max(...ganttChart.map(item => item.end));
-    const startTime = Math.min(...ganttChart.map(item => item.start));
-    const timeRange = endTime - startTime || 1;
+    // Reserve left/right margin so the "0" label isn't clipped
+    const marginLeft  = 4;
+    const marginRight = 4;
+    const drawWidth   = width - marginLeft - marginRight;
 
+    function timeToX(t) {
+        return marginLeft + ((t - chartStart) / timeRange) * drawWidth;
+    }
 
-    const scaleX = canvas.width / timeRange;
+    const BAR_TOP    = 8;
+    const BAR_BOTTOM = height - 22;
+    const BAR_HEIGHT = BAR_BOTTOM - BAR_TOP;
+    const LABEL_Y    = height - 6;
 
-
-    const colors = [
+    const processColors = [
         "#e67e22", "#3498db", "#e74c3c", "#2ecc71", "#9b59b6",
-        "#1abc9c", "#d35400", "#34495e", "#27ae60", "#f39c12"
+        "#1abc9c", "#d35400", "#8e44ad", "#27ae60", "#f39c12"
     ];
 
+    // --- Draw idle block from 0 → first process start (if any gap) ---
+    const firstProcessStart = Math.min(...ganttChart.map(item => item.start));
+    if (firstProcessStart > 0) {
+        const x0 = timeToX(0);
+        const x1 = timeToX(firstProcessStart);
+        const bw = x1 - x0;
+
+        ctx.fillStyle = 'rgba(180,180,180,0.10)';
+        ctx.fillRect(x0, BAR_TOP, bw, BAR_HEIGHT);
+
+        ctx.strokeStyle = '#555';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0, BAR_TOP, bw, BAR_HEIGHT);
+
+        ctx.fillStyle = '#888';
+        ctx.font = 'bold 11px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('Idle', x0 + bw / 2, BAR_TOP + BAR_HEIGHT / 2);
+    }
+
+    // --- Draw each gantt block ---
+    const drawnEndLabels = new Set(); // avoid duplicate end-time labels
 
     ganttChart.forEach((item, index) => {
-        const x = (item.start - startTime) * scaleX;
-        const width = (item.end - item.start) * scaleX;
+        const x0 = timeToX(item.start);
+        const x1 = timeToX(item.end);
+        const bw = x1 - x0;
 
-        const processNumber = parseInt(item.id.substring(1)) - 1;
-        const color = colors[processNumber % colors.length];
+        // color by process number
+        const pNum = parseInt(item.id.replace(/\D/g, '')) - 1;
+        const color = processColors[(isNaN(pNum) ? index : pNum) % processColors.length];
 
-
+        // bar fill
         ctx.fillStyle = color;
-        ctx.fillRect(x, 10, width, height - 30);
+        ctx.fillRect(x0, BAR_TOP, bw, BAR_HEIGHT);
 
-
-        ctx.strokeStyle = "#fff";
+        // bar border
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x, 10, width, height - 30);
+        ctx.strokeRect(x0, BAR_TOP, bw, BAR_HEIGHT);
 
+        // process label inside bar
+        ctx.fillStyle = '#000';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Only draw label if bar is wide enough
+        if (bw > 16) {
+            ctx.fillText(item.id, x0 + bw / 2, BAR_TOP + BAR_HEIGHT / 2);
+        }
 
-        ctx.fillStyle = "#000";
-        ctx.font = "12px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(item.id, x + width / 2, height / 2 - 5);
+        // --- Time tick labels below bar ---
+        ctx.font = '10px Arial';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#bbb';
 
+        // Start label (skip 0 if idle block already drew it, draw 0 only once)
+        if (item.start === 0 || (item.start === firstProcessStart && firstProcessStart > 0)) {
+            // will be handled by the unified "0" label below
+        } else {
+            ctx.textAlign = 'center';
+            ctx.fillText(String(item.start), x0, LABEL_Y);
+        }
 
-        ctx.font = "11px Arial";
-        ctx.textAlign = "left";
-        ctx.fillText(`${item.start}`, x, height);
-
-
-        if (index === ganttChart.length - 1 || ganttChart[index + 1].start > item.end) {
-            ctx.textAlign = "right";
-            ctx.fillText(`${item.end}`, x + width, height);
+        // End label
+        if (!drawnEndLabels.has(item.end)) {
+            ctx.textAlign = 'center';
+            ctx.fillText(String(item.end), x1, LABEL_Y);
+            drawnEndLabels.add(item.end);
         }
     });
 
+    // Always draw "0" at the very left
+    ctx.font = '10px Arial';
+    ctx.fillStyle = '#bbb';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText('0', marginLeft, LABEL_Y);
 
-    ctx.strokeStyle = "#000";
+    // --- Baseline ---
+    ctx.strokeStyle = '#444';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(0, height - 10);
-    ctx.lineTo(canvas.width, height - 10);
+    ctx.moveTo(marginLeft, BAR_BOTTOM + 2);
+    ctx.lineTo(width - marginRight, BAR_BOTTOM + 2);
     ctx.stroke();
 }
 
@@ -420,79 +464,118 @@ function calculateFCFS(processes) {
 
 function calculateRoundRobin(processes, timeQuantum = 2) {
 
-    const processesCopy = processes.map(p => ({
-        ...p,
-        remainingTime: p.burstTime
-    }));
-    
-    const results = processes.map(p => ({
-        ...p,
-        startTime: -1, 
-        completionTime: 0,
-        turnaroundTime: 0,
-        waitingTime: 0,
-    }));
-    
+    // FIX 1: Sort by arrival time first so queue order is correct
+    const processesCopy = [...processes]
+        .sort((a, b) => a.arrivalTime - b.arrivalTime)
+        .map(p => ({
+            ...p,
+            remainingTime: p.burstTime,
+            startTime: -1,
+            completionTime: 0,
+            turnaroundTime: 0,
+            waitingTime: 0,
+        }));
+
     const ganttChart = [];
-    
+    const queue = [];         // holds indices into processesCopy
+    const inQueue = new Set(); // tracks who is currently in the queue to avoid duplicates
+
     let currentTime = 0;
-    const queue = [];
-    
-    for (let i = 0; i < processesCopy.length; i++) {
-        if (processesCopy[i].arrivalTime === 0) {
+    let completedCount = 0;
+    const n = processesCopy.length;
+
+    // FIX 2: Seed the queue with whoever has arrived at time 0.
+    // If nobody arrives at 0, jump currentTime to the first arrival.
+    const firstArrival = processesCopy[0].arrivalTime;
+    currentTime = firstArrival;
+
+    for (let i = 0; i < n; i++) {
+        if (processesCopy[i].arrivalTime <= currentTime) {
             queue.push(i);
+            inQueue.add(i);
         }
     }
-    
-    while (queue.length > 0) {
-        const index = queue.shift();
-        
-        if (results[index].startTime === -1) {
-            results[index].startTime = currentTime;
-        }
-        
-        const executeTime = Math.min(timeQuantum, processesCopy[index].remainingTime);
-        
-        ganttChart.push({
-            id: processesCopy[index].id,
-            start: currentTime,
-            end: currentTime + executeTime,
-        });
-        
-        currentTime += executeTime;
-        processesCopy[index].remainingTime -= executeTime;
-        
-        for (let i = 0; i < processesCopy.length; i++) {
-            if (
-                !queue.includes(i) && 
-                processesCopy[i].remainingTime > 0 && 
-                processesCopy[i].arrivalTime <= currentTime &&
-                i !== index
-            ) {
-                if (processesCopy[i].arrivalTime >= ganttChart[ganttChart.length - 1].start) {
-                    queue.push(i);
+
+    while (completedCount < n) {
+
+        // If queue is empty the CPU is idle — jump to next arrival
+        if (queue.length === 0) {
+            let nextArrival = Infinity;
+            for (let i = 0; i < n; i++) {
+                if (processesCopy[i].remainingTime > 0 && processesCopy[i].arrivalTime > currentTime) {
+                    nextArrival = Math.min(nextArrival, processesCopy[i].arrivalTime);
                 }
             }
+            // Push idle block to Gantt
+            ganttChart.push({ id: 'Idle', start: currentTime, end: nextArrival });
+            currentTime = nextArrival;
+            // Enqueue all processes that have now arrived
+            for (let i = 0; i < n; i++) {
+                if (processesCopy[i].remainingTime > 0 && processesCopy[i].arrivalTime <= currentTime && !inQueue.has(i)) {
+                    queue.push(i);
+                    inQueue.add(i);
+                }
+            }
+            continue;
         }
-        
-        if (processesCopy[index].remainingTime > 0) {
-            queue.push(index);
-        } else {
 
-            results[index].completionTime = currentTime;
-            results[index].turnaroundTime = results[index].completionTime - processesCopy[index].arrivalTime;
-            results[index].waitingTime = results[index].turnaroundTime - processesCopy[index].burstTime;
+        const index = queue.shift();
+        inQueue.delete(index);
+
+        // Record first execution time
+        if (processesCopy[index].startTime === -1) {
+            processesCopy[index].startTime = currentTime;
+        }
+
+        // Execute for min(timeQuantum, remainingTime)
+        const executeTime = Math.min(timeQuantum, processesCopy[index].remainingTime);
+        const sliceStart = currentTime;
+        const sliceEnd = currentTime + executeTime;
+
+        ganttChart.push({ id: processesCopy[index].id, start: sliceStart, end: sliceEnd });
+
+        currentTime = sliceEnd;
+        processesCopy[index].remainingTime -= executeTime;
+
+        // FIX 3: Enqueue any process that arrived during this time slice
+        // Simple check: arrivalTime <= currentTime and not already in queue
+        for (let i = 0; i < n; i++) {
+            if (i !== index &&
+                processesCopy[i].remainingTime > 0 &&
+                processesCopy[i].arrivalTime <= currentTime &&
+                !inQueue.has(i)) {
+                queue.push(i);
+                inQueue.add(i);
+            }
+        }
+
+        if (processesCopy[index].remainingTime > 0) {
+            // Not done — push back to end of queue
+            queue.push(index);
+            inQueue.add(index);
+        } else {
+            // Done — calculate metrics
+            processesCopy[index].completionTime = currentTime;
+            processesCopy[index].turnaroundTime = currentTime - processesCopy[index].arrivalTime;
+            processesCopy[index].waitingTime = processesCopy[index].turnaroundTime - processesCopy[index].burstTime;
+            completedCount++;
         }
     }
-    
+
+    // Build results in original process order
+    const results = processes.map(p => {
+        const found = processesCopy.find(pc => pc.id === p.id);
+        return new ProcessResult(p, found.startTime, found.completionTime);
+    });
+
     const totalWaitingTime = results.reduce((sum, p) => sum + p.waitingTime, 0);
     const totalTurnaroundTime = results.reduce((sum, p) => sum + p.turnaroundTime, 0);
-    
+
     return {
         results,
         ganttChart,
-        averageWaitingTime: totalWaitingTime / processes.length,
-        averageTurnaroundTime: totalTurnaroundTime / processes.length,
+        averageWaitingTime: totalWaitingTime / n,
+        averageTurnaroundTime: totalTurnaroundTime / n,
     };
 }
 
@@ -677,114 +760,6 @@ function calculateSRTF(processes) {
     };
 }
 
-function calculateEDF(processes) {
-    const processesCopy = processes.map(p => ({
-        ...p,
-        remainingTime: p.burstTime,
-        startTime: -1,
-        completionTime: 0,
-        completed: false
-    }));
-    
-    const results = [];
-    const ganttChart = [];
-    
-    let currentTime = 0;
-    let completedCount = 0;
-    
-
-    while (completedCount < processesCopy.length) {
-
-        const readyQueue = processesCopy.filter(p => 
-            !p.completed && p.arrivalTime <= currentTime
-        );
-        
-        if (readyQueue.length === 0) {
-
-            const nextArrival = processesCopy
-                .filter(p => !p.completed)
-                .reduce((min, p) => Math.min(min, p.arrivalTime), Infinity);
-            
-
-                if (currentTime < nextArrival) {
-                ganttChart.push({
-                    id: "idle",
-                    start: currentTime,
-                    end: nextArrival
-                });
-            }
-            
-            currentTime = nextArrival;
-            continue;
-        }
-        
-
-        readyQueue.sort((a, b) => a.deadline - b.deadline);
-        
-
-        const currentProcess = readyQueue[0];
-        
-
-        if (currentProcess.startTime === -1) {
-            currentProcess.startTime = currentTime;
-        }
-        
-
-        const processIndex = processesCopy.findIndex(p => p.id === currentProcess.id);
-        
-
-        if (ganttChart.length === 0 || ganttChart[ganttChart.length - 1].id !== currentProcess.id) {
-            ganttChart.push({
-                id: currentProcess.id,
-                start: currentTime,
-                end: currentTime + 1
-            });
-        } else {
-
-            ganttChart[ganttChart.length - 1].end = currentTime + 1;
-        }
-        
-
-        currentTime += 1;
-        processesCopy[processIndex].remainingTime -= 1;
-        
-
-        if (processesCopy[processIndex].remainingTime === 0) {
-            processesCopy[processIndex].completed = true;
-            processesCopy[processIndex].completionTime = currentTime;
-            completedCount++;
-            
-
-            const originalProcess = processes.find(p => p.id === currentProcess.id);
-            results.push(new ProcessResult(
-                originalProcess,
-                processesCopy[processIndex].startTime,
-                processesCopy[processIndex].completionTime
-            ));
-        }
-    }
-    
-
-    const consolidatedGantt = [];
-    for (let i = 0; i < ganttChart.length; i++) {
-        if (i === 0 || ganttChart[i].id !== ganttChart[i-1].id) {
-            consolidatedGantt.push({...ganttChart[i]});
-        } else {
-            consolidatedGantt[consolidatedGantt.length - 1].end = ganttChart[i].end;
-        }
-    }
-    
-    const totalWaitingTime = results.reduce((sum, p) => sum + p.waitingTime, 0);
-    const totalTurnaroundTime = results.reduce((sum, p) => sum + p.turnaroundTime, 0);
-    
-    return {
-        results,
-        ganttChart: consolidatedGantt,
-        averageWaitingTime: totalWaitingTime / processes.length,
-        averageTurnaroundTime: totalTurnaroundTime / processes.length,
-    };
-}
-
 
 
 function calculatePriority(processes) {
@@ -935,7 +910,7 @@ function getAlgorithmInfo(algorithm) {
         case 'RoundRobin':
             return {
                 description:[
-                    "Each process is assigned a fixed time quantum = 4 units.",
+                    "Each process is assigned a fixed time quantum (user-defined).",
                     "Processes are executed in a cyclic order.",
                     "If a process doesn't finish in its time slice, it is moved to the end of the queue.",
                     "Preemptive by design.",
@@ -952,28 +927,6 @@ function getAlgorithmInfo(algorithm) {
                     "Performance depends on time quantum selection",
                     "If time quantum too large, degenerates to FCFS",
                     "If time quantum too small, too many context switches"
-                ]
-            };
-        case 'EDF':
-            return {
-                description:[
-                    "Primarily used in real-time systems.",
-                    "CPU is assigned to the process with the earliest deadline.",
-                    "It is a dynamic priority scheduling algorithm.",
-                    "Deadlines can be absolute or relative to arrival time.",
-                    "Preemptive: if a process with an earlier deadline arrives, it can preempt the current one."
-                ],
-                advantages: [
-                    "Optimal for meeting deadlines when system is not overloaded",
-                    "Dynamic priority assignment based on urgency",
-                    "Good utilization of CPU time",
-                    "Minimizes deadline misses"
-                ],
-                disadvantages: [
-                    "Can cause starvation of processes with longer deadlines",
-                    "Requires knowledge of deadlines in advance",
-                    "Performance degrades under high load",
-                    "More complex to implement than static priority algorithms"
                 ]
             };
         case 'Priority':

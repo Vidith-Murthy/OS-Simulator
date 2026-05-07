@@ -1,0 +1,19 @@
+{
+  "name": "os-visualizer",
+  "version": "1.0.0",
+  "description": "Educational OS visualization tool",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "operating-systems",
+    "visualization",
+    "education"
+  ],
+  "author": "OS Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^5.2.1"
+  }
+}

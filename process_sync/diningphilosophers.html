@@ -511,7 +511,7 @@ function leftFork(i):
     return i
 
 function rightFork(i):
-    return (i + 1) % NUM_PHILOSOPHERS
+    return (i - 1 + NUM_PHILOSOPHERS) % NUM_PHILOSOPHERS
 
 function tryToEat(i):
     if state[i] == "hungry" AND
@@ -685,7 +685,7 @@ function startSimulation():
     }
 
     function rightFork(i) {
-      return (i + 1) % NUM_PHILOSOPHERS;
+      return (i - 1 + NUM_PHILOSOPHERS) % NUM_PHILOSOPHERS;
     }
 
     function tryToEat(i) {
