@@ -1,0 +1,11 @@
+services:
+  - type: static
+    name: os-visualizer
+    plan: free
+    staticPublishPath: ./
+    buildCommand: "echo 'No build needed for static site'"
+    routes:
+      - path: /
+        routes:
+          - path: /*
+            route: index.html
