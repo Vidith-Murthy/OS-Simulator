@@ -11,7 +11,7 @@ class Process {
 
 class ProcessResult extends Process {
     constructor(process, startTime, completionTime) {
-        super(process.id, process.arrivalTime, process.burstTime, process.priority);
+        super(process.id, process.arrivalTime, process.burstTime, process.priority, process.deadline);
         this.startTime = startTime;
         this.completionTime = completionTime;
         this.turnaroundTime = completionTime - process.arrivalTime;
@@ -23,6 +23,7 @@ class ProcessResult extends Process {
 const algorithmSelect = document.getElementById('algorithm');
 const processTableBody = document.getElementById('processTableBody');
 const priorityHeader = document.getElementById('priorityHeader');
+const deadlineHeader = document.getElementById('deadlineHeader');
 const decreaseProcessesBtn = document.getElementById('decreaseProcesses');
 const increaseProcessesBtn = document.getElementById('increaseProcesses');
 const processCountDisplay = document.getElementById('processCount');
@@ -41,15 +42,18 @@ const backButton = document.getElementById('backButton');
 const osConceptsButton = document.getElementById('osConceptsButton');
 const timeQuantumContainer = document.getElementById('timeQuantumContainer');
 const timeQuantumInput = document.getElementById('timeQuantum');
+const simulationTimeContainer = document.getElementById('simulationTimeContainer');
+const simulationTimeInput = document.getElementById('simulationTime');
 
 let processes = [
-    new Process('P1', 0, 5, 3),
-    new Process('P2', 0, 2, 1),
-    new Process('P3', 0, 4, 2)
+    new Process('P1', 0, 5, 3, 7),
+    new Process('P2', 0, 2, 1, 4),
+    new Process('P3', 0, 4, 2, 6)
 ];
 let numberOfProcesses = 3;
 let results = [];
 let ganttChart = [];
+let deadlineMarkers = [];
 let hasRun = false;
 
 
@@ -64,7 +68,9 @@ function attachEventListeners() {
     algorithmSelect.addEventListener('change', function() {
         const algorithm = this.value;
         priorityHeader.style.display = algorithm === 'Priority' ? 'table-cell' : 'none';
+        deadlineHeader.style.display = algorithm === 'EDF' ? 'table-cell' : 'none';
         timeQuantumContainer.style.display = algorithm === 'RoundRobin' ? 'flex' : 'none';
+        simulationTimeContainer.style.display = algorithm === 'EDF' ? 'flex' : 'none';
         updateProcessTableUI();
     });
 
@@ -100,7 +106,8 @@ function updateProcessesArray() {
                 `P${i}`, 
                 0, 
                 Math.floor(Math.random() * 5) + 1,
-                Math.floor(Math.random() * 5) + 1
+                Math.floor(Math.random() * 5) + 1,
+                i * 2 + 2
             ));
         }
     } else if (numberOfProcesses < processes.length) {
@@ -112,6 +119,7 @@ function updateProcessesArray() {
 function updateProcessTableUI() {
     processTableBody.innerHTML = '';
     const showPriority = algorithmSelect.value === 'Priority';
+    const showDeadline = algorithmSelect.value === 'EDF';
    
     processes.forEach((process, index) => {
         const row = document.createElement('tr');
@@ -159,6 +167,19 @@ function updateProcessTableUI() {
             priorityCell.appendChild(priorityInput);
             row.appendChild(priorityCell);
         }
+
+        if (showDeadline) {
+            const deadlineCell = document.createElement('td');
+            const deadlineInput = document.createElement('input');
+            deadlineInput.type = 'number';
+            deadlineInput.min = '1';
+            deadlineInput.value = process.deadline;
+            deadlineInput.addEventListener('change', function() {
+                processes[index].deadline = parseInt(this.value) || 1;
+            });
+            deadlineCell.appendChild(deadlineInput);
+            row.appendChild(deadlineCell);
+        }
         
         processTableBody.appendChild(row);
     });
@@ -187,12 +208,16 @@ function runSchedulingAlgorithm() {
         case 'Priority':
             calculationResult = calculatePriority(processes);
             break;
+        case 'EDF':
+            calculationResult = calculateEDF(processes, parseInt(simulationTimeInput.value) || 160);
+            break;
         default:
             calculationResult = calculateFCFS(processes);
     }
     
     results = calculationResult.results;
     ganttChart = calculationResult.ganttChart;
+    deadlineMarkers = calculationResult.deadlineMarkers || [];
 
     updateResultsUI(calculationResult);
     updateAlgorithmInfo(algorithm);
@@ -243,11 +268,13 @@ function updateResultsUI(calculationResult) {
 function drawGanttChart() {
     const canvas = ganttChartCanvas;
     const ctx = canvas.getContext('2d');
+    const showDeadlineMarkers = algorithmSelect.value === 'EDF' && deadlineMarkers.length > 0;
+    const deadlineAreaHeight = showDeadlineMarkers ? 44 : 0;
 
     // Resize canvas to match its CSS-rendered width so it's never squished or cut off
     const containerWidth = canvas.parentElement.clientWidth || 800;
     canvas.width = containerWidth;
-    canvas.height = 80;
+    canvas.height = 80 + deadlineAreaHeight;
 
     const width  = canvas.width;
     const height = canvas.height;
@@ -270,7 +297,7 @@ function drawGanttChart() {
         return marginLeft + ((t - chartStart) / timeRange) * drawWidth;
     }
 
-    const BAR_TOP    = 8;
+    const BAR_TOP    = 8 + deadlineAreaHeight;
     const BAR_BOTTOM = height - 22;
     const BAR_HEIGHT = BAR_BOTTOM - BAR_TOP;
     const LABEL_Y    = height - 6;
@@ -311,7 +338,9 @@ function drawGanttChart() {
 
         // color by process number
         const pNum = parseInt(item.id.replace(/\D/g, '')) - 1;
-        const color = processColors[(isNaN(pNum) ? index : pNum) % processColors.length];
+        const color = item.id === 'Idle'
+            ? 'rgba(180,180,180,0.25)'
+            : processColors[(isNaN(pNum) ? index : pNum) % processColors.length];
 
         // bar fill
         ctx.fillStyle = color;
@@ -323,7 +352,7 @@ function drawGanttChart() {
         ctx.strokeRect(x0, BAR_TOP, bw, BAR_HEIGHT);
 
         // process label inside bar
-        ctx.fillStyle = '#000';
+        ctx.fillStyle = item.id === 'Idle' ? '#888' : '#000';
         ctx.font = 'bold 12px Arial';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -367,6 +396,36 @@ function drawGanttChart() {
     ctx.moveTo(marginLeft, BAR_BOTTOM + 2);
     ctx.lineTo(width - marginRight, BAR_BOTTOM + 2);
     ctx.stroke();
+
+    if (showDeadlineMarkers) {
+        const markerLabelY = 16;
+        const markerArrowTop = 22;
+        const markerArrowBottom = BAR_TOP - 6;
+
+        deadlineMarkers.forEach(marker => {
+            const x = timeToX(marker.time);
+            ctx.strokeStyle = '#cfcfcf';
+            ctx.fillStyle = '#e8e8e8';
+            ctx.lineWidth = 1;
+
+            ctx.font = 'bold 11px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(marker.id, x, markerLabelY);
+
+            ctx.beginPath();
+            ctx.moveTo(x, markerArrowTop);
+            ctx.lineTo(x, markerArrowBottom);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x - 5, markerArrowBottom - 8);
+            ctx.lineTo(x, markerArrowBottom);
+            ctx.lineTo(x + 5, markerArrowBottom - 8);
+            ctx.closePath();
+            ctx.fill();
+        });
+    }
 }
 
 
@@ -406,15 +465,16 @@ function updateAlgorithmInfo(algorithm) {
 
 function resetApplication() {
     processes = [
-        new Process('P1', 0, 5, 3),
-        new Process('P2', 0, 2, 1),
-        new Process('P3', 0, 4, 2)
+        new Process('P1', 0, 5, 3, 7),
+        new Process('P2', 0, 2, 1, 4),
+        new Process('P3', 0, 4, 2, 6)
     ];
     numberOfProcesses = 3;
     processCountDisplay.textContent = numberOfProcesses;
     
     results = [];
     ganttChart = [];
+    deadlineMarkers = [];
     
     updateProcessTableUI();
     resultsSection.style.display = 'none';
@@ -840,6 +900,127 @@ function calculatePriority(processes) {
     };
 }
 
+function calculateEDF(processes, simulationTime) {
+    const tasks = processes.map((process, index) => ({
+        ...process,
+        taskIndex: index,
+        relativeDeadline: Math.max(1, process.deadline || 1),
+        period: Math.max(1, process.deadline || 1),
+        nextReleaseTime: process.arrivalTime
+    }));
+
+    const ganttChart = [];
+    const deadlineMarkers = [];
+    const activeJobs = [];
+    const completedJobs = [];
+    const horizon = Math.max(1, simulationTime || 1);
+    let currentTime = 0;
+
+    tasks.forEach(task => {
+        for (let releaseTime = task.arrivalTime; releaseTime < horizon; releaseTime += task.period) {
+            const absoluteDeadline = releaseTime + task.relativeDeadline;
+            if (absoluteDeadline <= horizon) {
+                deadlineMarkers.push({
+                    id: task.id,
+                    time: absoluteDeadline
+                });
+            }
+        }
+    });
+
+    function releaseJobsUntil(time) {
+        tasks.forEach(task => {
+            while (task.nextReleaseTime <= time && task.nextReleaseTime < horizon) {
+                const jobNumber = Math.floor((task.nextReleaseTime - task.arrivalTime) / task.period) + 1;
+                activeJobs.push({
+                    id: task.id,
+                    taskIndex: task.taskIndex,
+                    jobNumber,
+                    arrivalTime: task.nextReleaseTime,
+                    burstTime: task.burstTime,
+                    remainingTime: task.burstTime,
+                    absoluteDeadline: task.nextReleaseTime + task.relativeDeadline,
+                    startTime: -1
+                });
+                task.nextReleaseTime += task.period;
+            }
+        });
+    }
+
+    while (currentTime < horizon) {
+        releaseJobsUntil(currentTime);
+
+        const readyJobs = activeJobs.filter(job => job.arrivalTime <= currentTime && job.remainingTime > 0);
+
+        if (readyJobs.length === 0) {
+            if (ganttChart.length > 0 && ganttChart[ganttChart.length - 1].id === 'Idle') {
+                ganttChart[ganttChart.length - 1].end = currentTime + 1;
+            } else {
+                ganttChart.push({ id: 'Idle', start: currentTime, end: currentTime + 1 });
+            }
+            currentTime++;
+            continue;
+        }
+
+        readyJobs.sort((a, b) =>
+            a.absoluteDeadline - b.absoluteDeadline ||
+            a.arrivalTime - b.arrivalTime ||
+            a.taskIndex - b.taskIndex ||
+            a.jobNumber - b.jobNumber
+        );
+
+        const currentJob = readyJobs[0];
+        if (currentJob.startTime === -1) {
+            currentJob.startTime = currentTime;
+        }
+
+        if (ganttChart.length > 0 && ganttChart[ganttChart.length - 1].id === currentJob.id) {
+            ganttChart[ganttChart.length - 1].end = currentTime + 1;
+        } else {
+            ganttChart.push({ id: currentJob.id, start: currentTime, end: currentTime + 1 });
+        }
+
+        currentJob.remainingTime--;
+        currentTime++;
+
+        if (currentJob.remainingTime === 0) {
+            const completionTime = currentTime;
+            completedJobs.push({
+                id: `${currentJob.id} [${currentJob.jobNumber}]`,
+                arrivalTime: currentJob.arrivalTime,
+                burstTime: currentJob.burstTime,
+                startTime: currentJob.startTime,
+                completionTime,
+                turnaroundTime: completionTime - currentJob.arrivalTime,
+                waitingTime: completionTime - currentJob.arrivalTime - currentJob.burstTime
+            });
+
+            const activeJobIndex = activeJobs.indexOf(currentJob);
+            if (activeJobIndex !== -1) {
+                activeJobs.splice(activeJobIndex, 1);
+            }
+        }
+    }
+
+    completedJobs.sort((a, b) =>
+        a.arrivalTime - b.arrivalTime ||
+        a.startTime - b.startTime ||
+        a.id.localeCompare(b.id)
+    );
+
+    const totalWaitingTime = completedJobs.reduce((sum, job) => sum + job.waitingTime, 0);
+    const totalTurnaroundTime = completedJobs.reduce((sum, job) => sum + job.turnaroundTime, 0);
+    const completedCount = completedJobs.length;
+
+    return {
+        results: completedJobs,
+        ganttChart,
+        deadlineMarkers: deadlineMarkers.sort((a, b) => a.time - b.time || a.id.localeCompare(b.id)),
+        averageWaitingTime: completedCount ? totalWaitingTime / completedCount : 0,
+        averageTurnaroundTime: completedCount ? totalTurnaroundTime / completedCount : 0,
+    };
+}
+
 
 function getAlgorithmInfo(algorithm) {
     switch (algorithm) {
@@ -949,6 +1130,28 @@ function getAlgorithmInfo(algorithm) {
                     "Requires priority assignment mechanism",
                     "Overhead in managing priority values",
                     "Priority inversion problems may occur without mitigation"
+                ]
+            };
+        case 'EDF':
+            return {
+                description: [
+                    "Earliest Deadline First selects the released job with the earliest absolute deadline.",
+                    "This simulator treats EDF as a preemptive real-time scheduling algorithm with periodic releases.",
+                    "Each task uses its deadline value as both the relative deadline and the repeat interval.",
+                    "When a newly released job has an earlier deadline, it can preempt the currently running job.",
+                    "This matches the textbook-style EDF behavior used in real-time CPU scheduling examples."
+                ],
+                advantages: [
+                    "Models real-time scheduling behavior more faithfully than a one-time static deadline sort",
+                    "Responds immediately to newly released jobs with earlier deadlines",
+                    "Well suited for periodic and soft real-time task sets",
+                    "Makes deadline-driven preemption visible in the Gantt chart"
+                ],
+                disadvantages: [
+                    "Requires a simulation time so repeated releases can be visualized",
+                    "Frequent preemption can increase context-switch overhead",
+                    "Tasks may still miss deadlines when utilization is too high",
+                    "Average waiting time becomes job-based rather than single-process based"
                 ]
             };
         default:
