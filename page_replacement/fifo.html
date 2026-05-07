@@ -101,7 +101,42 @@
     .social-links a:hover{border-color:var(--red-dim);color:var(--red);background:var(--red-faint)}
     footer p{font-size:12px;color:var(--text-muted);font-family:var(--font-mono)}
     @media(max-width:768px){.two-col{grid-template-columns:1fr} h1{font-size:1.8rem}}
-</style>
+
+    /* ── Simulation Panel ── */
+    .sim-panel{background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;padding:36px;margin-bottom:24px;backdrop-filter:blur(10px);position:relative;overflow:hidden}
+    .sim-panel::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--red-dim),transparent)}
+    .sim-panel h2{font-family:var(--font-display);font-weight:700;font-size:1.2rem;color:var(--text-primary);margin-bottom:20px;letter-spacing:-.3px;display:flex;align-items:center;gap:10px}
+    .sim-panel h2 i{color:var(--red)}
+    .sim-inputs{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px;align-items:flex-end}
+    .sim-inputs label{font-family:var(--font-mono);font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;display:block;margin-bottom:6px}
+    .sim-inputs input{background:var(--bg-deep);border:1px solid var(--border-subtle);color:var(--text-primary);font-family:var(--font-mono);font-size:13px;padding:10px 14px;border-radius:6px;outline:none;transition:border-color .2s;width:100%}
+    .sim-inputs input:focus{border-color:var(--red-dim)}
+    .input-group{flex:1;min-width:200px}
+    .input-group-sm{width:110px}
+    .run-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 24px;background:var(--red);color:#fff;border:none;border-radius:6px;font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:var(--transition);white-space:nowrap}
+    .run-btn:hover{background:#c82020;transform:translateY(-1px)}
+    .reset-btn{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;background:transparent;color:var(--text-secondary);border:1px solid var(--border-subtle);border-radius:6px;font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:var(--transition)}
+    .reset-btn:hover{color:var(--red);border-color:var(--red-dim)}
+    /* Stats bar */
+    .sim-stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+    .stat-box{background:var(--bg-deep);border:1px solid var(--border-subtle);border-radius:8px;padding:12px 20px;text-align:center;min-width:100px}
+    .stat-val{font-family:var(--font-mono);font-size:1.4rem;font-weight:700;color:var(--red)}
+    .stat-lbl{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;margin-top:2px}
+    /* Table */
+    .sim-table-wrap{overflow-x:auto;margin-bottom:16px}
+    .sim-table{border-collapse:collapse;width:100%;min-width:600px}
+    .sim-table th{font-family:var(--font-mono);font-size:10px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase;padding:8px 12px;border-bottom:1px solid var(--border-subtle);text-align:center}
+    .sim-table td{font-family:var(--font-mono);font-size:13px;padding:8px 10px;text-align:center;border-bottom:1px solid rgba(224,48,48,0.05)}
+    .sim-table tr:hover td{background:var(--red-faint)}
+    .cell-fault{color:var(--red);font-weight:700}
+    .cell-hit{color:#4caf50;font-weight:700}
+    .cell-page{background:rgba(224,48,48,0.12);border-radius:4px;display:inline-block;padding:2px 8px;min-width:28px}
+    .cell-replaced{background:rgba(224,48,48,0.3);border-radius:4px;display:inline-block;padding:2px 8px;min-width:28px;border:1px solid var(--red-dim)}
+    .cell-empty{color:var(--text-muted)}
+    /* Error */
+    .sim-error{background:rgba(224,48,48,0.08);border:1px solid var(--red-dim);border-radius:6px;padding:12px 16px;font-family:var(--font-mono);font-size:12px;color:var(--red);display:none;margin-bottom:16px}
+
+  </style>
 </head>
 <body>
 <div class="loader-wrapper"><div class="loader"></div><div class="loader-text">LOADING MODULE_</div></div>
@@ -109,7 +144,24 @@
 
 <nav>
   <a class="logo" href="../index.html"><span>OS VISUALIZER</span></a>
-  
+  <ul>
+    <li>
+      <div class="dropdown">
+        <button class="button"><i class="fas fa-sitemap"></i> Algorithms</button>
+        <div class="dropdown-content">
+          <a href="page_replacement_home.html"><i class="fas fa-exchange-alt"></i> Page Replacement</a>
+          <a href="../process_scheduling/process.html"><i class="fas fa-tasks"></i> Process Scheduling</a>
+          <a href="../file_allocation/file.html"><i class="fas fa-folder"></i> File Allocation</a>
+          <a href="../process_sync/home.html"><i class="fas fa-sync"></i> Process Synchronization</a>
+          <a href="../Memfit.html"><i class="fas fa-puzzle-piece"></i> Memory Fitting</a>
+          <a href="../deadlock_detection/deadlock_detection.html"><i class="fas fa-project-diagram"></i> Deadlock Detection</a>
+          <a href="../banker_algorithm/index.html"><i class="fas fa-university"></i> Banker's Algorithm</a>
+          <a href="../Disk/disk.html"><i class="fas fa-hdd"></i> Disk Scheduling</a>
+        </div>
+      </div>
+    </li>
+    <li><button class="button" onclick="location.href='../about.html'"><i class="fas fa-info-circle"></i> About</button></li>
+  </ul>
 </nav>
 
 <div class="container">
@@ -156,9 +208,32 @@
 
   
 
+  <div class="sim-panel">
+    <h2><i class="fas fa-terminal"></i> Interactive Simulation</h2>
+    <div class="sim-inputs">
+      <div class="input-group">
+        <label for="ref-str">Page Reference String</label>
+        <input id="ref-str" type="text" placeholder="e.g. 7 0 1 2 0 3 0 4 2 3 0 3 2" value="7 0 1 2 0 3 0 4 2 3 0 3 2">
+      </div>
+      <div class="input-group input-group-sm">
+        <label for="num-frames">Frames</label>
+        <input id="num-frames" type="number" min="1" max="10" value="3" style="width:100%">
+      </div>
+      <button class="run-btn" onclick="runSim()"><i class="fas fa-play"></i> Run</button>
+      <button class="reset-btn" onclick="resetSim()"><i class="fas fa-redo"></i> Reset</button>
+    </div>
+    <div id="sim-error" class="sim-error"></div>
+    <div id="sim-stats" class="sim-stats" style="display:none">
+      <div class="stat-box"><div class="stat-val" id="stat-faults">0</div><div class="stat-lbl">Page Faults</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-hits" style="color:#4caf50">0</div><div class="stat-lbl">Page Hits</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-ratio">0%</div><div class="stat-lbl">Fault Rate</div></div>
+      <div class="stat-box"><div class="stat-val" id="stat-total" style="color:var(--text-secondary)">0</div><div class="stat-lbl">Total Refs</div></div>
+    </div>
+    <div id="sim-results" class="sim-table-wrap" style="display:none"></div>
+  </div>
   <div class="content-card">
-    <h2><i class="fas fa-play-circle"></i> Try It Yourself</h2>
-    <p style="margin-bottom:24px">Step through the algorithm interactively, enter a custom reference string, and observe page faults in real time.</p>
+    <h2><i class="fas fa-play-circle"></i> About This Simulation</h2>
+    <p style="margin-bottom:24px">Enter any page reference string (space or comma-separated numbers) and the number of memory frames, then click <strong>Run</strong> to see the step-by-step trace. <span style="color:var(--red)">RED = page fault</span>, <span style="color:#4caf50">GREEN = page hit</span>.</p>
     <a href="page_replacement_home.html" class="back-btn"><i class="fas fa-arrow-left"></i> Back to Algorithms</a>
   </div>
 </div>
@@ -184,6 +259,76 @@ gsap.from('.page-tag',{opacity:0,y:20,duration:0.6,delay:1.2});
 gsap.from('h1',{opacity:0,y:30,duration:0.7,delay:1.4});
 gsap.from('.page-subtitle',{opacity:0,y:20,duration:0.6,delay:1.5});
 gsap.from('.content-card',{opacity:0,y:30,duration:0.5,stagger:0.12,delay:1.7,ease:'power2.out'});
+
+function parseRef(str){return str.trim().split(/[,\s]+/).filter(Boolean).map(Number).filter(n=>!isNaN(n)&&n>=0)}
+function buildTable(pages,frames,results,algo){
+  var tbl='<table class="sim-table"><thead><tr><th>Step</th><th>Page</th>';
+  for(var f=0;f<frames;f++) tbl+='<th>Frame '+(f+1)+'</th>';
+  tbl+='<th>Status</th>';
+  if(algo==='lfu'||algo==='mfu') tbl+='<th>Freq</th>';
+  if(algo==='second_chance') tbl+='<th>Ref Bits</th>';
+  tbl+='<th>Replaced</th></tr></thead><tbody>';
+  results.forEach(function(r,i){
+    tbl+='<tr><td>'+(i+1)+'</td><td><span class="cell-page">'+pages[i]+'</span></td>';
+    for(var f=0;f<frames;f++){
+      if(f<r.mem.length) tbl+='<td><span class="cell-page">'+r.mem[f]+'</span></td>';
+      else tbl+='<td><span class="cell-empty">—</span></td>';
+    }
+    tbl+='<td class="'+(r.fault?'cell-fault':'cell-hit')+'">'+(r.fault?'FAULT':'HIT')+'</td>';
+    if(algo==='lfu'||algo==='mfu'){
+      var fstr=r.freqSnap?r.freqSnap.join(', '):'';
+      tbl+='<td style="font-size:11px;color:var(--text-muted)">'+fstr+'</td>';
+    }
+    if(algo==='second_chance'){
+      var bs=r.refBits?r.refBits.join(''):'';
+      tbl+='<td style="font-size:11px;color:var(--text-muted)">'+bs+'</td>';
+    }
+    if(r.replaced!==undefined&&r.replaced!==null)
+      tbl+='<td><span class="cell-replaced">'+r.replaced+'</span></td>';
+    else tbl+='<td><span class="cell-empty">—</span></td>';
+    tbl+='</tr>';
+  });
+  tbl+='</tbody></table>';
+  return tbl;
+}
+function showError(msg){var e=document.getElementById('sim-error');e.style.display='block';e.textContent=msg}
+function clearError(){var e=document.getElementById('sim-error');e.style.display='none'}
+
+function runSim(){
+  clearError();
+  var refs=parseRef(document.getElementById('ref-str').value);
+  var frames=parseInt(document.getElementById('num-frames').value);
+  if(!refs.length){showError('Enter a valid page reference string.');return;}
+  if(isNaN(frames)||frames<1||frames>10){showError('Frames must be 1–10.');return;}
+  var mem=[],queue=[],faults=0,hits=0,results=[];
+  refs.forEach(function(pg){
+    var fault=false,replaced=null;
+    if(mem.indexOf(pg)===-1){
+      fault=true;faults++;
+      if(mem.length<frames){mem.push(pg);queue.push(pg);}
+      else{replaced=queue.shift();mem.splice(mem.indexOf(replaced),1);mem.push(pg);queue.push(pg);}
+    } else hits++;
+    results.push({mem:mem.slice(),fault:fault,replaced:replaced});
+  });
+  showResults(refs,frames,results,faults,hits,'fifo');
+}
+
+function showResults(refs,frames,results,faults,hits,algo){
+  document.getElementById('stat-faults').textContent=faults;
+  document.getElementById('stat-hits').textContent=hits;
+  document.getElementById('stat-ratio').textContent=refs.length?(100*faults/refs.length).toFixed(1)+'%':'—';
+  document.getElementById('stat-total').textContent=refs.length;
+  document.getElementById('sim-stats').style.display='flex';
+  document.getElementById('sim-results').innerHTML=buildTable(refs,frames,results,algo);
+  document.getElementById('sim-results').style.display='block';
+  document.getElementById('sim-results').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function resetSim(){
+  document.getElementById('sim-stats').style.display='none';
+  document.getElementById('sim-results').style.display='none';
+  clearError();
+}
+
 </script>
 </body>
 </html>
