@@ -507,6 +507,14 @@
             transition: var(--transition);
         }
 
+        /* Make entire card clickable */
+        .method-card h3 a::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: 10;
+        }
+
         .method-card h3 a:hover {
             color: var(--red);
         }
